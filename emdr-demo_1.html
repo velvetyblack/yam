@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Bilateral — demo</title>
+<style>
+  :root{
+    --field:#0d1117;        /* deep charcoal-blue field, easier than pure black */
+    --field-2:#11161f;
+    --orb:#cfe3ff;          /* soft cool light */
+    --orb-glow:rgba(120,170,255,.55);
+    --ink:#aeb7c4;          /* quiet text */
+    --ink-dim:#6b7686;
+    --line:#293140;
+    --accent:#8fb6ff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:radial-gradient(120% 120% at 50% 30%,var(--field-2),var(--field));
+    color:var(--ink);
+    font:400 17px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    height:100dvh;overflow:hidden;
+    display:flex;flex-direction:column;
+    -webkit-font-smoothing:antialiased;
+    user-select:none;-webkit-user-select:none;
+  }
+  /* ---- stage ---- */
+  #stage{position:relative;flex:1;overflow:hidden;}
+  #orb{
+    position:absolute;top:50%;left:50%;
+    width:46px;height:46px;border-radius:50%;
+    background:radial-gradient(circle at 50% 45%,#fff,var(--orb) 45%,rgba(143,182,255,.25) 75%,transparent 78%);
+    box-shadow:0 0 32px 10px var(--orb-glow);
+    transform:translate(-50%,-50%);
+    opacity:0;transition:opacity .4s;
+    will-change:left;
+  }
+  #orb.on{opacity:1;}
+  /* faint reference baseline */
+  #baseline{
+    position:absolute;top:50%;left:8%;right:8%;height:1px;
+    background:linear-gradient(90deg,transparent,var(--line),transparent);
+    opacity:0;transition:opacity .4s;
+  }
+  #baseline.on{opacity:.5;}
+  #endhint{
+    position:absolute;left:0;right:0;bottom:24px;text-align:center;
+    color:var(--ink-dim);font-size:14px;letter-spacing:.02em;
+    opacity:0;transition:opacity 1.2s;pointer-events:none;
+  }
+  #endhint.show{opacity:1;}
+
+  /* ---- panels ---- */
+  .panel{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:26px;padding:34px;
+    text-align:center;transition:opacity .35s;
+  }
+  .panel.hidden{opacity:0;pointer-events:none;}
+  h1{font-weight:500;font-size:21px;letter-spacing:.04em;color:#dfe6f0;margin:0;}
+  p.lede{margin:0;max-width:30ch;color:var(--ink-dim);font-size:15px;line-height:1.6;}
+
+  .modes{display:flex;gap:10px;}
+  .mode{
+    padding:11px 16px;border:1px solid var(--line);border-radius:999px;
+    background:transparent;color:var(--ink);font-size:15px;
+  }
+  .mode[aria-pressed="true"]{border-color:var(--accent);color:#e7eefc;background:rgba(143,182,255,.08);}
+
+  .cta{
+    padding:16px 40px;border-radius:999px;border:1px solid var(--accent);
+    background:rgba(143,182,255,.10);color:#e7eefc;font-size:18px;letter-spacing:.02em;
+    min-width:200px;
+  }
+  .cta:active{background:rgba(143,182,255,.2);}
+  .ghost{background:none;border:none;color:var(--ink-dim);font-size:15px;padding:10px;}
+  .meta{color:var(--ink-dim);font-size:13px;letter-spacing:.03em;}
+
+  /* pause panel sits over a dark field, very low stimulation */
+  #pausePanel .big{font-size:19px;color:#cdd6e3;font-weight:400;letter-spacing:.06em;}
+
+  /* ---- guide overlay ---- */
+  #guideLink{position:absolute;top:calc(env(safe-area-inset-top) + 14px);right:18px;
+    background:none;border:none;color:var(--ink-dim);font-size:14px;letter-spacing:.03em;z-index:5;}
+  #guide{
+    position:absolute;inset:0;z-index:10;display:none;
+    background:#0d1117;
+    background-image:radial-gradient(120% 120% at 50% 20%,var(--field-2),var(--field));
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:calc(env(safe-area-inset-top) + 22px) 26px calc(env(safe-area-inset-bottom) + 40px);
+  }
+  #guide.open{display:block;}
+  #guide .wrap{max-width:34rem;margin:0 auto;}
+  #guide h2{font-weight:500;font-size:20px;color:#dfe6f0;letter-spacing:.03em;margin:0 0 4px;}
+  #guide h3{font-weight:500;font-size:15px;color:var(--accent);letter-spacing:.04em;
+    text-transform:uppercase;margin:26px 0 8px;}
+  #guide p,#guide li{font-size:15px;line-height:1.65;color:var(--ink);margin:6px 0;}
+  #guide ol,#guide ul{padding-left:1.2em;margin:6px 0;}
+  #guide .note{color:var(--ink-dim);font-size:14px;line-height:1.6;}
+  #guide .close{margin:30px auto 0;display:block;}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="baseline"></div>
+  <div id="orb"></div>
+  <div id="endhint">tap anywhere to end this set</div>
+</div>
+
+<!-- START -->
+<section class="panel" id="startPanel">
+  <h1>Bilateral</h1>
+  <p class="lede">A moving point and alternating tones, left and right. Sets run ~30 seconds, then stop so you can notice what's present. Tap to begin the next one when you're ready.</p>
+  <div class="modes" role="group" aria-label="Mode">
+    <button class="mode" data-mode="both" aria-pressed="true">Both</button>
+    <button class="mode" data-mode="visual" aria-pressed="false">Visual</button>
+    <button class="mode" data-mode="audio" aria-pressed="false">Audio</button>
+  </div>
+  <button class="cta" id="beginBtn">Begin set</button>
+  <p class="meta" id="startMeta">For audio, use earbuds. Landscape gives a wider sweep.</p>
+  <button id="guideLink">Guide</button>
+</section>
+
+<!-- GUIDE -->
+<div id="guide">
+  <div class="wrap">
+    <h2>A self-guided session</h2>
+    <p class="note">Choose a moderate memory, not your most overwhelming — solo, you're your own container. Keep sets brisk while processing, slower and softer when settling.</p>
+
+    <h3>Before — set the target</h3>
+    <ol>
+      <li><b>Image</b> — the single worst snapshot.</li>
+      <li><b>Negative belief</b> it gives you ("it was my fault," "I'm not safe").</li>
+      <li><b>Positive belief</b> you'd rather hold ("I did what I could").</li>
+      <li><b>Feeling + body</b> — the emotion, and where it sits physically.</li>
+      <li><b>Distress 0–10</b> — your before-number.</li>
+    </ol>
+    <p>Pick a <b>calm place</b> too — a scene you can return to. That's your off-ramp.</p>
+
+    <h3>The set loop</h3>
+    <p>Hold the image, the belief, and the body feeling together. Begin a set and follow along — don't steer; let whatever comes, come. At the pause, ask <i>"what do I get now?"</i> and notice what's most present. That becomes the next set.</p>
+    <p>Continue. Every few sets, return to the target and re-rate 0–10. Watch it come down. Stop when it feels roughly neutral or clearly stops shifting.</p>
+
+    <h3>When it goes quiet — install</h3>
+    <p>Hold the now-neutral memory with your positive belief; run a few sets letting it feel truer. Then a <b>body scan</b>: sweep head to toe and run a set on anything still tight.</p>
+
+    <h3>Close — every time</h3>
+    <p>Never get up still activated. If stirred, picture packing what's unfinished into a container with a lid, then sit in your calm place. Ground before standing: feet on floor, name what you see and hear, slow breaths.</p>
+
+    <p class="note">If you flood or feel like you're floating out of the present, stop the sets and orient to the room. That's not failure — it's the right move.</p>
+
+    <button class="cta close" id="guideClose">Close</button>
+  </div>
+</div>
+
+<!-- PAUSE -->
+<section class="panel hidden" id="pausePanel">
+  <div class="big">Notice what's here.</div>
+  <button class="cta" id="nextBtn">Begin next set</button>
+  <button class="ghost" id="doneBtn">End</button>
+  <p class="meta" id="pauseMeta"></p>
+</section>
+
+<script>
+(()=>{
+  const stage=document.getElementById('stage');
+  const orb=document.getElementById('orb');
+  const baseline=document.getElementById('baseline');
+  const endhint=document.getElementById('endhint');
+  const startPanel=document.getElementById('startPanel');
+  const pausePanel=document.getElementById('pausePanel');
+  const beginBtn=document.getElementById('beginBtn');
+  const nextBtn=document.getElementById('nextBtn');
+  const doneBtn=document.getElementById('doneBtn');
+  const pauseMeta=document.getElementById('pauseMeta');
+
+  // ---- defaults (calibrate later) ----
+  const SET_MS=30000;          // set length
+  const PERIOD=1.4;            // seconds per full round trip (L->R->L)
+  const AMP_FRAC=0.40;         // half-width as fraction of stage width (so full sweep = 0.80)
+  const PING_HZ=174;           // soft low tone pitch
+
+  let mode='both';
+  let running=false;
+  let rafId=null;
+  let motionStart=0, setStart=0;
+  let prevVel=0;               // for edge detection
+  let passes=0;
+  let ac=null;                 // AudioContext
+
+  // mode buttons
+  document.querySelectorAll('.mode').forEach(b=>{
+    b.addEventListener('click',()=>{
+      mode=b.dataset.mode;
+      document.querySelectorAll('.mode').forEach(x=>x.setAttribute('aria-pressed', x===b?'true':'false'));
+    });
+  });
+
+  function ensureAudio(){
+    if(!ac){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      ac=new AC();
+    }
+    if(ac.state==='suspended') ac.resume();
+  }
+
+  function ping(side){            // side: -1 left, +1 right
+    if(!ac||mode==='visual') return;
+    const t=ac.currentTime;
+    const g=ac.createGain();
+    const pan=ac.createStereoPanner();
+    const lp=ac.createBiquadFilter();
+    lp.type='lowpass'; lp.frequency.value=520; lp.Q.value=0.4; // round off the edges
+    pan.pan.value=side;
+    // two slightly detuned sines = thicker, breathier body
+    const o1=ac.createOscillator(), o2=ac.createOscillator();
+    o1.type='sine'; o2.type='sine';
+    o1.frequency.value=PING_HZ; o2.frequency.value=PING_HZ*1.005;
+    // soft bloom: slow attack, long gentle tail
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(0.42,t+0.045);
+    g.gain.exponentialRampToValueAtTime(0.0006,t+0.5);
+    o1.connect(g); o2.connect(g);
+    g.connect(lp).connect(pan).connect(ac.destination);
+    o1.start(t); o2.start(t); o1.stop(t+0.55); o2.stop(t+0.55);
+  }
+
+  function frame(now){
+    if(!running) return;
+    const tSec=(now-motionStart)/1000;
+    const theta=(tSec/PERIOD)*2*Math.PI;
+    const x=-Math.cos(theta);           // start at left (-1), at rest
+    const vel=Math.sin(theta);          // velocity sign; 0 at edges
+
+    // place orb (visual modes)
+    if(mode!=='audio'){
+      const w=stage.clientWidth;
+      const px=w/2 + x*(w*AMP_FRAC);
+      orb.style.left=px+'px';
+    }
+
+    // edge detection: velocity sign change => reached an edge
+    if(prevVel<=0 && vel>0){          // left edge (x≈-1)
+      ping(-1); passes++;
+    }else if(prevVel>=0 && vel<0){    // right edge (x≈+1)
+      ping(1); passes++;
+    }
+    prevVel=vel;
+
+    if(now-setStart>=SET_MS){ endSet(); return; }
+    rafId=requestAnimationFrame(frame);
+  }
+
+  function startSet(){
+    ensureAudio();
+    running=true; passes=0; prevVel=0;
+    setStart=performance.now(); motionStart=setStart;
+    startPanel.classList.add('hidden');
+    pausePanel.classList.add('hidden');
+    if(mode!=='audio'){ orb.classList.add('on'); baseline.classList.add('on'); }
+    else { orb.classList.remove('on'); baseline.classList.remove('on'); }
+    // fire the opening left ping immediately
+    if(mode!=='visual'){ ping(-1); }
+    endhint.classList.add('show');
+    rafId=requestAnimationFrame(frame);
+  }
+
+  function endSet(){
+    running=false;
+    if(rafId) cancelAnimationFrame(rafId);
+    orb.classList.remove('on'); baseline.classList.remove('on');
+    endhint.classList.remove('show');
+    const secs=Math.round((performance.now()-setStart)/1000);
+    pauseMeta.textContent=`${secs}s · ~${passes} passes`;
+    pausePanel.classList.remove('hidden');
+  }
+
+  // tap stage to end a set early
+  stage.addEventListener('pointerdown',()=>{ if(running) endSet(); });
+
+  beginBtn.addEventListener('click',startSet);
+  nextBtn.addEventListener('click',startSet);
+  doneBtn.addEventListener('click',()=>{
+    pausePanel.classList.add('hidden');
+    startPanel.classList.remove('hidden');
+  });
+
+  // guide overlay
+  const guide=document.getElementById('guide');
+  document.getElementById('guideLink').addEventListener('click',()=>guide.classList.add('open'));
+  document.getElementById('guideClose').addEventListener('click',()=>{guide.classList.remove('open');guide.scrollTop=0;});
+})();
+</script>
+</body>
+</html>
