@@ -27,40 +27,11 @@ h1{
   text-align:center;
   font-weight:700;
 }
-.tabs{
-  display:flex;
-  gap:6px;
-  background:rgba(255,255,255,.55);
-  padding:4px;
-  border-radius:12px;
-  margin-bottom:16px;
-}
-.tab{
-  flex:1;
-  padding:10px 4px;
-  border:none;
-  background:transparent;
-  border-radius:9px;
-  font-size:13px;
-  font-weight:600;
-  color:#5c2d91;
-  cursor:pointer;
-  font-family:inherit;
-  opacity:.7;
-}
-.tab.active{
-  background:#fff;
-  color:#5c2d91;
-  opacity:1;
-  box-shadow:0 1px 3px rgba(0,0,0,.08);
-}
-.panel{display:none}
-.panel.active{display:block}
 .card{
   background:#fff;
   border-radius:14px;
-  padding:16px;
-  margin-bottom:14px;
+  padding:14px 16px;
+  margin-bottom:12px;
   box-shadow:0 1px 3px rgba(0,0,0,.05);
 }
 label{
@@ -87,21 +58,18 @@ input:focus{
   border-color:#5c2d91;
   box-shadow:0 0 0 3px rgba(92,45,145,.18);
 }
-.input-row{display:flex;gap:8px;margin-bottom:12px}
-.input-row > div{flex:1}
-.ga-input{display:flex;gap:8px;align-items:flex-end}
-.ga-input > div{flex:1}
-.ga-input .suffix{
-  font-size:13px;
-  color:#6b7280;
-  padding-bottom:14px;
-}
+.pair{display:flex;gap:8px}
+.pair > *{flex:1}
+.ga-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.ga-row input{flex:1}
+.ga-row .suffix{font-size:13px;color:#6b7280}
+.hint{font-size:12px;color:#6b7280;margin-top:6px}
 .result{
   background:linear-gradient(135deg,#5c2d91,#7e3fb8);
   color:#fff;
   border-radius:14px;
   padding:18px;
-  margin-top:8px;
+  margin-top:4px;
 }
 .result-row{
   display:flex;
@@ -109,102 +77,62 @@ input:focus{
   align-items:baseline;
   padding:6px 0;
 }
-.result-row + .result-row{
-  border-top:1px solid rgba(255,255,255,.18);
-}
+.result-row + .result-row{border-top:1px solid rgba(255,255,255,.18)}
 .result-label{font-size:13px;opacity:.85}
 .result-value{font-size:18px;font-weight:700}
-.hint{
-  font-size:12px;
-  color:#6b7280;
-  margin-top:-6px;
-  margin-bottom:12px;
-}
-.err{color:#dc2626;font-size:13px;margin-top:6px}
-.date-pair{display:flex;gap:8px}
-.date-pair input{flex:1}
 </style>
 </head>
 <body>
 
 <h1>Pregwheel</h1>
 
-<div class="tabs">
-  <button class="tab active" data-tab="lmp">LMP</button>
-  <button class="tab" data-tab="edc">EDC</button>
-  <button class="tab" data-tab="ga">GA + date</button>
-</div>
-
-<!-- LMP -->
-<div class="panel active" id="panel-lmp">
-  <div class="card">
-    <label for="lmp-date">Last menstrual period</label>
+<div class="card">
+  <label>LMP</label>
+  <div class="pair">
     <input type="date" id="lmp-date">
-    <div class="hint">Tap to pick, or type DD/MM/YYYY below</div>
-    <input type="text" id="lmp-text" placeholder="DD/MM/YYYY" inputmode="numeric">
-    <div class="err" id="lmp-err"></div>
-  </div>
-  <div class="card">
-    <label for="lmp-on-date">GA on date (optional)</label>
-    <input type="date" id="lmp-on-date">
-    <input type="text" id="lmp-on-text" placeholder="DD/MM/YYYY (defaults to today)" inputmode="numeric" style="margin-top:8px">
-  </div>
-  <div class="result" id="lmp-result" style="display:none">
-    <div class="result-row"><span class="result-label">EDC</span><span class="result-value" id="lmp-edc">—</span></div>
-    <div class="result-row"><span class="result-label">GA today</span><span class="result-value" id="lmp-ga-today">—</span></div>
-    <div class="result-row" id="lmp-ga-date-row" style="display:none"><span class="result-label" id="lmp-ga-date-label">GA on date</span><span class="result-value" id="lmp-ga-date">—</span></div>
+    <input type="text" id="lmp-text" placeholder="ddmmyyyy" inputmode="numeric">
   </div>
 </div>
 
-<!-- EDC -->
-<div class="panel" id="panel-edc">
-  <div class="card">
-    <label for="edc-date">EDC</label>
+<div class="card">
+  <label>EDC</label>
+  <div class="pair">
     <input type="date" id="edc-date">
-    <div class="hint">Tap to pick, or type DD/MM/YYYY below</div>
-    <input type="text" id="edc-text" placeholder="DD/MM/YYYY" inputmode="numeric">
-    <div class="err" id="edc-err"></div>
-  </div>
-  <div class="card">
-    <label for="edc-on-date">GA on date (optional)</label>
-    <input type="date" id="edc-on-date">
-    <input type="text" id="edc-on-text" placeholder="DD/MM/YYYY (defaults to today)" inputmode="numeric" style="margin-top:8px">
-  </div>
-  <div class="result" id="edc-result" style="display:none">
-    <div class="result-row"><span class="result-label">GA today</span><span class="result-value" id="edc-ga-today">—</span></div>
-    <div class="result-row" id="edc-ga-date-row" style="display:none"><span class="result-label" id="edc-ga-date-label">GA on date</span><span class="result-value" id="edc-ga-date">—</span></div>
+    <input type="text" id="edc-text" placeholder="ddmmyyyy" inputmode="numeric">
   </div>
 </div>
 
-<!-- GA + date -->
-<div class="panel" id="panel-ga">
-  <div class="card">
-    <label>GA</label>
-    <div class="ga-input">
-      <div>
-        <input type="number" id="ga-weeks" placeholder="weeks" min="0" max="45" inputmode="numeric">
-      </div>
-      <span class="suffix">wk</span>
-      <div>
-        <input type="number" id="ga-days" placeholder="days" min="0" max="6" inputmode="numeric">
-      </div>
-      <span class="suffix">d</span>
-    </div>
+<div class="card">
+  <label>GA on a date</label>
+  <div class="ga-row">
+    <input type="number" id="ga-weeks" placeholder="wk" min="0" max="45" inputmode="numeric">
+    <span class="suffix">wk</span>
+    <input type="number" id="ga-days" placeholder="d" min="0" max="6" inputmode="numeric">
+    <span class="suffix">d</span>
   </div>
-  <div class="card">
-    <label for="ga-date">on date</label>
+  <div class="pair">
     <input type="date" id="ga-date">
-    <input type="text" id="ga-text" placeholder="DD/MM/YYYY (defaults to today)" inputmode="numeric" style="margin-top:8px">
-    <div class="err" id="ga-err"></div>
+    <input type="text" id="ga-text" placeholder="ddmmyyyy" inputmode="numeric">
   </div>
-  <div class="result" id="ga-result" style="display:none">
-    <div class="result-row"><span class="result-label">EDC</span><span class="result-value" id="ga-edc">—</span></div>
+  <div class="hint">Date blank = today. Fill any card and the others update.</div>
+</div>
+
+<div class="card">
+  <label>Check GA on another date</label>
+  <div class="pair">
+    <input type="date" id="q-date">
+    <input type="text" id="q-text" placeholder="ddmmyyyy" inputmode="numeric">
   </div>
+</div>
+
+<div class="result" id="result" style="display:none">
+  <div class="result-row"><span class="result-label">EDC</span><span class="result-value" id="r-edc">—</span></div>
+  <div class="result-row"><span class="result-label">GA today</span><span class="result-value" id="r-ga-today">—</span></div>
+  <div class="result-row" id="r-q-row" style="display:none"><span class="result-label" id="r-q-label">GA on date</span><span class="result-value" id="r-q">—</span></div>
 </div>
 
 <script>
 const DAY = 86400000;
-// DST-safe calendar-day arithmetic. Pregnancy = 40 weeks = exactly 280 days from LMP.
 const addDays = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
 const daysBetween = (a,b) => Math.round(
   (Date.UTC(b.getFullYear(),b.getMonth(),b.getDate()) -
@@ -212,18 +140,30 @@ const daysBetween = (a,b) => Math.round(
 const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 const isoFmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-// Parse DD/MM/YYYY or DD/MM/YY or DD-MM-YYYY etc. Returns Date or null.
+function today(){
+  const t = new Date();
+  return new Date(t.getFullYear(),t.getMonth(),t.getDate());
+}
+
+// Progressive dd/mm/yyyy formatting from bare digits
+function digitsToFormatted(v){
+  const d = v.replace(/\D/g,'').slice(0,8);
+  let out = d.slice(0,2);
+  if(d.length>2) out += '/'+d.slice(2,4);
+  if(d.length>4) out += '/'+d.slice(4,8);
+  return out;
+}
+
+// Accepts ddmmyyyy, ddmmyy, or any of those with separators
 function parseTyped(s){
   if(!s) return null;
-  const m = s.trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
-  if(!m) return null;
-  let [_,d,mo,y] = m;
-  d=+d; mo=+mo; y=+y;
-  if(y<100) y += y<50?2000:1900;
-  if(mo<1||mo>12||d<1||d>31) return null;
+  const digits = s.replace(/\D/g,'');
+  let d,mo,y;
+  if(digits.length===8){ d=+digits.slice(0,2); mo=+digits.slice(2,4); y=+digits.slice(4); }
+  else if(digits.length===6){ d=+digits.slice(0,2); mo=+digits.slice(2,4); y=+digits.slice(4); y += y<50?2000:1900; }
+  else return null;
   const date = new Date(y,mo-1,d);
-  if(date.getFullYear()!==y||date.getMonth()!==mo-1||date.getDate()!==d) return null;
-  return date;
+  return (date.getFullYear()===y && date.getMonth()===mo-1 && date.getDate()===d) ? date : null;
 }
 
 function parseIso(s){
@@ -234,109 +174,82 @@ function parseIso(s){
   return isNaN(d)?null:d;
 }
 
-function today(){
-  const t = new Date();
-  return new Date(t.getFullYear(),t.getMonth(),t.getDate());
-}
-
-function gaBetween(lmp, on){
+function gaString(lmp, on){
   const days = daysBetween(lmp, on);
   if(days<0) return null;
   return `${Math.floor(days/7)}+${days%7}`;
 }
 
-// Bind a date+text pair so they stay in sync. Returns getter.
+// Keep a date picker + numpad text field in sync; auto-format digits as they're typed
 function bindDate(dateId, textId, onChange){
   const dEl = document.getElementById(dateId);
   const tEl = document.getElementById(textId);
   dEl.addEventListener('change', () => {
     const d = parseIso(dEl.value);
-    if(d) tEl.value = fmt(d);
-    onChange();
+    tEl.value = d ? fmt(d) : '';
+    onChange(d);
   });
-  tEl.addEventListener('input', () => {
+  tEl.addEventListener('input', e => {
+    if(!e.inputType || !e.inputType.startsWith('delete')){
+      tEl.value = digitsToFormatted(tEl.value);
+    }
     const d = parseTyped(tEl.value);
     if(d) dEl.value = isoFmt(d);
-    onChange();
+    else if(!tEl.value) dEl.value = '';
+    onChange(d);
   });
-  return () => parseIso(dEl.value) || parseTyped(tEl.value);
+  return {
+    get(){ return parseIso(dEl.value) || parseTyped(tEl.value); },
+    set(d){ dEl.value = d?isoFmt(d):''; tEl.value = d?fmt(d):''; }
+  };
 }
 
-// Tabs
-document.querySelectorAll('.tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
-  });
-});
+let lmp = null;
 
-// LMP panel
-const getLmp = bindDate('lmp-date','lmp-text', updateLmp);
-const getLmpOn = bindDate('lmp-on-date','lmp-on-text', updateLmp);
-function updateLmp(){
-  const lmp = getLmp();
-  const errEl = document.getElementById('lmp-err');
-  const res = document.getElementById('lmp-result');
-  errEl.textContent = '';
-  if(!lmp){ res.style.display='none'; return; }
-  const edc = addDays(lmp, 280);
-  const t = today();
-  const gaToday = gaBetween(lmp, t);
-  document.getElementById('lmp-edc').textContent = fmt(edc);
-  document.getElementById('lmp-ga-today').textContent = gaToday ?? '—';
-  const onDate = getLmpOn();
-  const row = document.getElementById('lmp-ga-date-row');
-  if(onDate){
-    const ga = gaBetween(lmp, onDate);
-    document.getElementById('lmp-ga-date-label').textContent = `GA on ${fmt(onDate)}`;
-    document.getElementById('lmp-ga-date').textContent = ga ?? 'before LMP';
-    row.style.display='flex';
-  } else {
-    row.style.display='none';
+const lmpF = bindDate('lmp-date','lmp-text', d => { if(d){ lmp = d; sync('lmp'); } });
+const edcF = bindDate('edc-date','edc-text', d => { if(d){ lmp = addDays(d,-280); sync('edc'); } });
+const gaDateF = bindDate('ga-date','ga-text', () => gaChanged());
+const qF = bindDate('q-date','q-text', () => renderResult());
+
+const weeksEl = document.getElementById('ga-weeks');
+const daysEl = document.getElementById('ga-days');
+weeksEl.addEventListener('input', gaChanged);
+daysEl.addEventListener('input', gaChanged);
+
+function gaChanged(){
+  const w = parseInt(weeksEl.value,10);
+  if(isNaN(w)) return;
+  const d = parseInt(daysEl.value,10) || 0;
+  const asOf = gaDateF.get() || today();
+  lmp = addDays(asOf, -(w*7 + d));
+  sync('ga');
+}
+
+function sync(source){
+  if(!lmp) return;
+  if(source!=='lmp') lmpF.set(lmp);
+  if(source!=='edc') edcF.set(addDays(lmp,280));
+  if(source!=='ga'){
+    const asOf = gaDateF.get() || today();
+    const dd = daysBetween(lmp, asOf);
+    if(dd>=0){ weeksEl.value = Math.floor(dd/7); daysEl.value = dd%7; }
+    else { weeksEl.value=''; daysEl.value=''; }
   }
-  res.style.display='block';
+  renderResult();
 }
 
-// EDC panel
-const getEdc = bindDate('edc-date','edc-text', updateEdc);
-const getEdcOn = bindDate('edc-on-date','edc-on-text', updateEdc);
-function updateEdc(){
-  const edc = getEdc();
-  const res = document.getElementById('edc-result');
-  document.getElementById('edc-err').textContent='';
-  if(!edc){ res.style.display='none'; return; }
-  const lmp = addDays(edc, -280);
-  const t = today();
-  document.getElementById('edc-ga-today').textContent = gaBetween(lmp, t) ?? '—';
-  const onDate = getEdcOn();
-  const row = document.getElementById('edc-ga-date-row');
-  if(onDate){
-    const ga = gaBetween(lmp, onDate);
-    document.getElementById('edc-ga-date-label').textContent = `GA on ${fmt(onDate)}`;
-    document.getElementById('edc-ga-date').textContent = ga ?? 'before LMP';
+function renderResult(){
+  if(!lmp) return;
+  document.getElementById('result').style.display='block';
+  document.getElementById('r-edc').textContent = fmt(addDays(lmp,280));
+  document.getElementById('r-ga-today').textContent = gaString(lmp, today()) ?? '—';
+  const q = qF.get();
+  const row = document.getElementById('r-q-row');
+  if(q){
+    document.getElementById('r-q-label').textContent = `GA on ${fmt(q)}`;
+    document.getElementById('r-q').textContent = gaString(lmp, q) ?? 'before LMP';
     row.style.display='flex';
-  } else {
-    row.style.display='none';
-  }
-  res.style.display='block';
-}
-
-// GA + date panel
-const getGaDate = bindDate('ga-date','ga-text', updateGa);
-['ga-weeks','ga-days'].forEach(id => document.getElementById(id).addEventListener('input', updateGa));
-function updateGa(){
-  const w = parseInt(document.getElementById('ga-weeks').value,10);
-  const d = parseInt(document.getElementById('ga-days').value,10);
-  const date = getGaDate() || today();
-  const res = document.getElementById('ga-result');
-  if(isNaN(w)){ res.style.display='none'; return; }
-  const days = w*7 + (isNaN(d)?0:d);
-  const lmp = addDays(date, -days);
-  const edc = addDays(lmp, 280);
-  document.getElementById('ga-edc').textContent = fmt(edc);
-  res.style.display='block';
+  } else row.style.display='none';
 }
 </script>
 </body>
