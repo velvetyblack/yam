@@ -78,6 +78,7 @@
   }
   .cta:active{background:rgba(143,182,255,.2);}
   .ghost{background:none;border:none;color:var(--ink-dim);font-size:15px;padding:10px;}
+  #doneBtn{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 18px);right:18px;}
   .meta{color:var(--ink-dim);font-size:13px;letter-spacing:.03em;}
 
   /* pause panel sits over a dark field, very low stimulation */
@@ -115,7 +116,7 @@
 <!-- START -->
 <section class="panel" id="startPanel">
   <h1>Self-EMDR</h1>
-  <p class="lede">A moving point and alternating tones, left and right. Sets run ~30 seconds, then stop so you can notice what's present. Tap to begin the next one when you're ready.</p>
+  <p class="lede">A moving point and alternating tones, left and right. Sets run ~60 seconds, then stop so you can notice what's present. Tap to begin the next one when you're ready.</p>
   <div class="modes" role="group" aria-label="Mode">
     <button class="mode" data-mode="both" aria-pressed="true">Both</button>
     <button class="mode" data-mode="visual" aria-pressed="false">Visual</button>
@@ -161,9 +162,9 @@
 <!-- PAUSE -->
 <section class="panel hidden" id="pausePanel">
   <div class="big">Notice what's here.</div>
-  <button class="cta" id="nextBtn">Begin next set</button>
-  <button class="ghost" id="doneBtn">End</button>
+  <p class="meta">tap anywhere for the next set</p>
   <p class="meta" id="pauseMeta"></p>
+  <button class="ghost" id="doneBtn">End</button>
 </section>
 
 <script>
@@ -175,7 +176,6 @@
   const startPanel=document.getElementById('startPanel');
   const pausePanel=document.getElementById('pausePanel');
   const beginBtn=document.getElementById('beginBtn');
-  const nextBtn=document.getElementById('nextBtn');
   const doneBtn=document.getElementById('doneBtn');
   const pauseMeta=document.getElementById('pauseMeta');
 
@@ -191,8 +191,9 @@
   let motionStart=0, setStart=0;
   let prevVel=0;               // for edge detection
   let passes=0;
-  let ac=null;                 // AudioContext
-
+  let ac=null;    // AudioContext
+  let pauseShownAt=0;
+  
   // mode buttons
   document.querySelectorAll('.mode').forEach(b=>{
     b.addEventListener('click',()=>{
@@ -201,16 +202,23 @@
     });
   });
 
-  function ensureAudio(){
-    if(!ac){
-      const AC=window.AudioContext||window.webkitAudioContext;
+async function ensureAudio(){
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(ac && ac.state==='closed') ac=null;
+  if(!ac) ac=new AC();
+  if(ac.state!=='running'){
+    try{ await ac.resume(); }catch(e){}
+    if(ac.state!=='running'){
+      try{ ac.close(); }catch(e){}
       ac=new AC();
+      try{ await ac.resume(); }catch(e){}
     }
-    if(ac.state==='suspended') ac.resume();
   }
+}
 
   function ping(side){            // side: -1 left, +1 right
     if(!ac||mode==='visual') return;
+    if(ac.state!=='running'){ ac.resume(); return; }
     const t=ac.currentTime;
     const g=ac.createGain();
     const pan=ac.createStereoPanner();
@@ -256,19 +264,17 @@
     rafId=requestAnimationFrame(frame);
   }
 
-  function startSet(){
-    ensureAudio();
-    running=true; passes=0; prevVel=0;
-    setStart=performance.now(); motionStart=setStart;
-    startPanel.classList.add('hidden');
-    pausePanel.classList.add('hidden');
-    if(mode!=='audio'){ orb.classList.add('on'); baseline.classList.add('on'); }
-    else { orb.classList.remove('on'); baseline.classList.remove('on'); }
-    // fire the opening left ping immediately
-    if(mode!=='visual'){ ping(-1); }
-    endhint.classList.add('show');
-    rafId=requestAnimationFrame(frame);
-  }
+async function startSet(){
+  await ensureAudio();
+  running=true; passes=0; prevVel=0;
+  setStart=performance.now(); motionStart=setStart;
+  startPanel.classList.add('hidden');
+  pausePanel.classList.add('hidden');
+  if(mode!=='audio'){ orb.classList.add('on'); baseline.classList.add('on'); }
+  else { orb.classList.remove('on'); baseline.classList.remove('on'); }
+  endhint.classList.add('show');
+  rafId=requestAnimationFrame(frame);
+}
 
   function endSet(){
     running=false;
@@ -278,17 +284,22 @@
     const secs=Math.round((performance.now()-setStart)/1000);
     pauseMeta.textContent=`${secs}s · ~${passes} passes`;
     pausePanel.classList.remove('hidden');
+    pauseShownAt=performance.now();
   }
 
   // tap stage to end a set early
   stage.addEventListener('pointerdown',()=>{ if(running) endSet(); });
 
   beginBtn.addEventListener('click',startSet);
-  nextBtn.addEventListener('click',startSet);
-  doneBtn.addEventListener('click',()=>{
-    pausePanel.classList.add('hidden');
-    startPanel.classList.remove('hidden');
-  });
+  pausePanel.addEventListener('pointerdown',()=>{
+  if(performance.now()-pauseShownAt<400) return;
+  startSet();
+});
+doneBtn.addEventListener('pointerdown',(e)=>{
+  e.stopPropagation();
+  pausePanel.classList.add('hidden');
+  startPanel.classList.remove('hidden');
+});
 
   // guide overlay
   const guide=document.getElementById('guide');
