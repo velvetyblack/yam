@@ -49,6 +49,8 @@
   .weeks button{padding:8px 11px;font-size:13px;border:1px solid var(--line);background:#fff;
     border-radius:999px;color:var(--brand-dark);cursor:pointer;line-height:1.2}
   .weeks button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .nobleed{background:#fff;border:1.5px solid var(--brand);color:var(--brand-dark);margin-bottom:12px}
+  .nobleed.done{background:var(--none);border-color:var(--none);color:#fff}
   .hint{font-size:12px;color:var(--muted);margin-top:8px}
   .banner{padding:8px 12px;border-radius:10px;font-size:13px;margin-bottom:12px}
   .banner.preview{background:#fff7e6;border:1px solid #f0b429;color:#7a5a00}
@@ -88,6 +90,7 @@
       </p>
     </div>
 
+    <button id="noBleedBtn" class="btn nobleed">✓ สัปดาห์นี้ไม่มีเลือดออกเลย (ทั้ง 7 วัน)</button>
     <div class="card" id="grid"><!-- 7 days injected --></div>
 
     <div class="card">
@@ -138,6 +141,7 @@ async function api(payload){
 function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 function buildGrid(){
+  const nb=$('noBleedBtn'); if(nb){ nb.classList.remove('done'); nb.textContent='✓ สัปดาห์นี้ไม่มีเลือดออกเลย (ทั้ง 7 วัน)'; }
   const start = parseInput($('weekStart').value);
   const grid = $('grid'); grid.innerHTML='';
   for(let i=0;i<7;i++){
@@ -235,6 +239,13 @@ $('linkBtn').addEventListener('click', async ()=>{
   }catch(e){ alert('ไม่สำเร็จ: '+e.message); }
   $('linkBtn').disabled=false;
 });
+function markNoBleedWeek(){
+  const start=parseInput($('weekStart').value);
+  for(let i=0;i<7;i++){ const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i); state[ymd(d)]={status:'none',bothersome:false}; }
+  buildGrid();
+  const b=$('noBleedBtn'); b.classList.add('done'); b.textContent='✓ ทำเครื่องหมายครบ 7 วันแล้ว — กด "บันทึกข้อมูล" ด้านล่าง';
+}
+$('noBleedBtn').addEventListener('click',markNoBleedWeek);
 $('saveBtn').addEventListener('click',save);
 $('againBtn').addEventListener('click',()=>{ for(const k in state) delete state[k]; startDiary(); });
 $('closeBtn').addEventListener('click',()=>{ if(mode==='liff'&&window.liff&&liff.closeWindow) liff.closeWindow(); else location.reload(); });
