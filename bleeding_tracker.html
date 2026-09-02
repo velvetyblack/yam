@@ -181,7 +181,7 @@ function paint(key){
   both.classList.toggle('show', active);
   both.querySelector('input').checked = state[key].bothersome;
 }
-function parseInput(v){ if(!v){const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate()-6);} const p=v.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function parseInput(v){ if(!v){const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate()-t.getDay());} const p=v.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
 
 async function save(){
   $('saveBtn').disabled=true;
@@ -209,7 +209,7 @@ function renderWeekChips(){
   const t=new Date(); const today=new Date(t.getFullYear(),t.getMonth(),t.getDate());
   const labels=['สัปดาห์นี้','สัปดาห์ที่แล้ว','2 สัปดาห์ก่อน','3 สัปดาห์ก่อน'];
   for(let w=0;w<4;w++){
-    const start=new Date(today.getFullYear(),today.getMonth(),today.getDate()-6-7*w);
+    const start=new Date(today.getFullYear(),today.getMonth(),today.getDate()-today.getDay()-7*w);
     const end=new Date(start.getFullYear(),start.getMonth(),start.getDate()+6);
     const dd=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
     const b=document.createElement('button');
@@ -222,7 +222,7 @@ function renderWeekChips(){
 function startDiary(){
   $('whoSid').textContent=studyId;
   renderWeekChips();
-  const t=new Date(); const start=ymd(new Date(t.getFullYear(),t.getMonth(),t.getDate()-6));
+  const t=new Date(); const start=ymd(new Date(t.getFullYear(),t.getMonth(),t.getDate()-t.getDay()));
   selectWeek(start);
   $('weekStart').onchange=()=>{ for(const k in state) delete state[k]; buildGrid();
     document.querySelectorAll('#weekChips button').forEach(b=>b.classList.remove('on')); };
