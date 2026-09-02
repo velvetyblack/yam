@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>บันทึกเลือดออกทางช่องคลอด</title>
+<!-- LINE LIFF SDK -->
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#fff; --ink:#1f2328; --muted:#6b7280; --line:#e5e7eb;
+    --brand:#678DC6; --brand-dark:#4f6f9f; --none:#9ca3af; --spot:#f0b429; --bleed:#e5484d; --accent:#678DC6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif;
+    font-size:16px;line-height:1.5}
+  .wrap{max-width:520px;margin:0 auto;padding:16px 14px 40px}
+  h1{font-size:19px;margin:6px 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:14px;margin-bottom:12px}
+  .who{font-size:13px;color:var(--muted)}
+  .who b{color:var(--ink)}
+  label.fld{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
+  input[type=text],input[type=date]{width:100%;padding:10px 12px;font-size:16px;
+    border:1px solid var(--line);border-radius:10px;background:#fff}
+  .day{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
+  .day:first-child{border-top:none}
+  .dlabel{flex:0 0 88px;font-size:13px}
+  .dlabel b{display:block;font-size:15px}
+  .seg{display:flex;gap:6px;flex:1}
+  .seg button{flex:1;padding:9px 4px;font-size:13px;border:1px solid var(--line);
+    background:#fff;border-radius:10px;color:var(--muted);cursor:pointer;line-height:1.15}
+  .seg button.on[data-v=none]{background:var(--none);border-color:var(--none);color:#fff}
+  .seg button.on[data-v=spotting]{background:var(--spot);border-color:var(--spot);color:#3a2c00}
+  .seg button.on[data-v=bleeding]{background:var(--bleed);border-color:var(--bleed);color:#fff}
+  .both{flex:0 0 100%;margin:4px 0 0 96px;font-size:13px;color:var(--accent);display:none}
+  .both.show{display:flex;align-items:center;gap:6px}
+  .both input{width:18px;height:18px;accent-color:var(--accent)}
+  textarea{width:100%;min-height:54px;padding:10px 12px;font-size:15px;
+    border:1px solid var(--line);border-radius:10px;resize:vertical}
+  .btn{display:block;width:100%;padding:14px;font-size:17px;font-weight:600;border:none;
+    border-radius:12px;background:var(--brand);color:#fff;cursor:pointer;margin-top:6px}
+  .btn:disabled{opacity:.5}
+  .ghost{background:#eef0f2;color:var(--ink)}
+  .btn{background:var(--brand)}
+  .weeks{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+  .weeks button{padding:8px 11px;font-size:13px;border:1px solid var(--line);background:#fff;
+    border-radius:999px;color:var(--brand-dark);cursor:pointer;line-height:1.2}
+  .weeks button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+  .banner{padding:8px 12px;border-radius:10px;font-size:13px;margin-bottom:12px}
+  .banner.preview{background:#fff7e6;border:1px solid #f0b429;color:#7a5a00}
+  .ok{text-align:center;padding:26px 10px}
+  .ok .big{font-size:48px}
+  .hidden{display:none}
+  .legend{font-size:12px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="banner"></div>
+  <h1>บันทึกเลือดออกทางช่องคลอด</h1>
+  <p class="sub">งานวิจัยการคุมกำเนิดชนิดฝัง • โรงพยาบาลจุฬาลงกรณ์</p>
+
+  <!-- STEP: linking / identify -->
+  <div id="linkCard" class="card hidden">
+    <label class="fld">รหัสอาสาสมัคร (Study ID)</label>
+    <input id="sidInput" type="text" inputmode="latin" autocapitalize="characters" placeholder="เช่น P001">
+    <button id="linkBtn" class="btn" style="margin-top:10px">ยืนยันรหัส</button>
+    <p class="hint">กรอกรหัสที่ได้รับจากเจ้าหน้าที่ครั้งแรกเพียงครั้งเดียว</p>
+  </div>
+
+  <!-- STEP: diary -->
+  <div id="diaryCard" class="hidden">
+    <div class="card">
+      <div class="who">อาสาสมัคร: <b id="whoSid">—</b></div>
+      <label class="fld" style="margin-top:10px">เลือกสัปดาห์ที่ต้องการบันทึก</label>
+      <div class="weeks" id="weekChips"></div>
+      <label class="fld">หรือเลือกวันเริ่มต้นเอง</label>
+      <input id="weekStart" type="date">
+      <p class="legend">
+        <b>ไม่มี</b> = ไม่มีเลือดออก &nbsp;•&nbsp;
+        <b>กะปริบกะปรอย</b> = เลือดออกเล็กน้อย ไม่ต้องใช้ผ้าอนามัย &nbsp;•&nbsp;
+        <b>เลือดออก</b> = ต้องใช้ผ้าอนามัย
+      </p>
+    </div>
+
+    <div class="card" id="grid"><!-- 7 days injected --></div>
+
+    <div class="card">
+      <label class="fld">สัปดาห์นี้ได้รับยา/การรักษาเพื่อหยุดเลือดหรือไม่ (ถ้ามี ระบุ)</label>
+      <textarea id="treatment" placeholder="เช่น ได้รับยา… / ไม่มี"></textarea>
+      <label class="fld" style="margin-top:10px">หมายเหตุ (ถ้ามี)</label>
+      <textarea id="note" placeholder=""></textarea>
+    </div>
+
+    <button id="saveBtn" class="btn">บันทึกข้อมูล</button>
+    <p class="hint" id="saveHint">ข้อมูลจะถูกบันทึกแบบไม่ระบุชื่อ</p>
+  </div>
+
+  <!-- STEP: done -->
+  <div id="doneCard" class="card ok hidden">
+    <div class="big">✅</div>
+    <p style="font-size:18px;font-weight:600;margin:6px 0">บันทึกเรียบร้อยแล้ว ขอบคุณค่ะ</p>
+    <p class="sub" id="doneMsg"></p>
+    <button id="againBtn" class="btn ghost">บันทึกสัปดาห์อื่น</button>
+    <button id="closeBtn" class="btn" style="margin-top:8px">ปิดหน้าต่าง</button>
+  </div>
+
+  <!-- loading -->
+  <div id="loading" class="card">กำลังโหลด…</div>
+
+</div>
+
+<script>
+/* ======================= CONFIG — fill these two ======================= */
+const LIFF_ID  = 'PASTE_YOUR_LIFF_ID';                 // from LINE Developers > LIFF
+const API_URL  = 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL';    // the /exec URL from Apps Script deploy
+/* ====================================================================== */
+
+const THDAY = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+let userId = null, studyId = null, mode = 'preview';
+const state = {};   // date -> {status, bothersome}
+
+const $ = id => document.getElementById(id);
+function show(id){ ['linkCard','diaryCard','doneCard','loading'].forEach(x=>$(x).classList.add('hidden')); $(id).classList.remove('hidden'); }
+function banner(html,cls){ const b=$('banner'); if(!html){b.innerHTML='';return;} b.innerHTML='<div class="banner '+cls+'">'+html+'</div>'; }
+
+async function api(payload){
+  const res = await fetch(API_URL, { method:'POST', body: JSON.stringify(payload) }); // text/plain => no preflight
+  const txt = await res.text();
+  try { return JSON.parse(txt); } catch(e){ throw new Error('API response not JSON: '+txt.slice(0,120)); }
+}
+
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+function buildGrid(){
+  const start = parseInput($('weekStart').value);
+  const grid = $('grid'); grid.innerHTML='';
+  for(let i=0;i<7;i++){
+    const d = new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+    const key = ymd(d);
+    if(!state[key]) state[key] = {status:'', bothersome:false};
+    const row = document.createElement('div'); row.className='day';
+    row.innerHTML =
+      '<div class="dlabel">'+THDAY[d.getDay()]+' <b>'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'</b></div>'+
+      '<div class="seg" data-key="'+key+'">'+
+        '<button data-v="none">ไม่มี</button>'+
+        '<button data-v="spotting">กะปริบ<br>กะปรอย</button>'+
+        '<button data-v="bleeding">เลือด<br>ออก</button>'+
+      '</div>'+
+      '<label class="both" data-key="'+key+'"><input type="checkbox"> รบกวนการใช้ชีวิต</label>';
+    grid.appendChild(row);
+    // restore
+    paint(key);
+  }
+  grid.querySelectorAll('.seg button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const key=b.parentElement.dataset.key;
+      state[key].status=b.dataset.v;
+      if(b.dataset.v==='none') state[key].bothersome=false;
+      paint(key);
+    });
+  });
+  grid.querySelectorAll('.both input').forEach(cb=>{
+    cb.addEventListener('change',()=>{ state[cb.closest('.both').dataset.key].bothersome=cb.checked; });
+  });
+}
+function paint(key){
+  const seg=document.querySelector('.seg[data-key="'+key+'"]'); if(!seg) return;
+  seg.querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.v===state[key].status));
+  const both=document.querySelector('.both[data-key="'+key+'"]');
+  const active = state[key].status==='spotting'||state[key].status==='bleeding';
+  both.classList.toggle('show', active);
+  both.querySelector('input').checked = state[key].bothersome;
+}
+function parseInput(v){ if(!v){const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate()-6);} const p=v.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+
+async function save(){
+  $('saveBtn').disabled=true;
+  const week_start=$('weekStart').value;
+  const days=Object.keys(state).filter(k=>state[k].status).map(k=>({date:k,status:state[k].status,bothersome:state[k].bothersome}));
+  if(!days.length){ alert('กรุณาเลือกสถานะอย่างน้อย 1 วัน'); $('saveBtn').disabled=false; return; }
+  try{
+    const r=await api({action:'submit', studyId:(mode==='preview'?studyId:null), userId, week_start, days,
+                       treatment:$('treatment').value, note:$('note').value, source:'self'});
+    if(!r.ok) throw new Error(r.error||'save failed');
+    $('doneMsg').textContent='บันทึก '+r.days_saved+' วัน (รหัส '+r.study_id+')';
+    show('doneCard');
+  }catch(e){ alert('บันทึกไม่สำเร็จ: '+e.message); }
+  $('saveBtn').disabled=false;
+}
+
+function selectWeek(startYmd){
+  $('weekStart').value=startYmd;
+  for(const k in state) delete state[k];
+  buildGrid();
+  document.querySelectorAll('#weekChips button').forEach(b=> b.classList.toggle('on', b.dataset.start===startYmd));
+}
+function renderWeekChips(){
+  const box=$('weekChips'); box.innerHTML='';
+  const t=new Date(); const today=new Date(t.getFullYear(),t.getMonth(),t.getDate());
+  const labels=['สัปดาห์นี้','สัปดาห์ที่แล้ว','2 สัปดาห์ก่อน','3 สัปดาห์ก่อน'];
+  for(let w=0;w<4;w++){
+    const start=new Date(today.getFullYear(),today.getMonth(),today.getDate()-6-7*w);
+    const end=new Date(start.getFullYear(),start.getMonth(),start.getDate()+6);
+    const dd=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
+    const b=document.createElement('button');
+    b.dataset.start=ymd(start);
+    b.innerHTML=labels[w]+'<br>'+dd(start)+'–'+dd(end);
+    b.addEventListener('click',()=>selectWeek(b.dataset.start));
+    box.appendChild(b);
+  }
+}
+function startDiary(){
+  $('whoSid').textContent=studyId;
+  renderWeekChips();
+  const t=new Date(); const start=ymd(new Date(t.getFullYear(),t.getMonth(),t.getDate()-6));
+  selectWeek(start);
+  $('weekStart').onchange=()=>{ for(const k in state) delete state[k]; buildGrid();
+    document.querySelectorAll('#weekChips button').forEach(b=>b.classList.remove('on')); };
+  show('diaryCard');
+}
+
+$('linkBtn').addEventListener('click', async ()=>{
+  const sid=$('sidInput').value.trim(); if(!sid){alert('กรุณากรอกรหัส');return;}
+  $('linkBtn').disabled=true;
+  try{
+    if(mode==='liff'){ const r=await api({action:'link',userId,study_id:sid}); if(!r.ok)throw new Error(r.error); studyId=r.study_id; }
+    else studyId=sid;
+    startDiary();
+  }catch(e){ alert('ไม่สำเร็จ: '+e.message); }
+  $('linkBtn').disabled=false;
+});
+$('saveBtn').addEventListener('click',save);
+$('againBtn').addEventListener('click',()=>{ for(const k in state) delete state[k]; startDiary(); });
+$('closeBtn').addEventListener('click',()=>{ if(mode==='liff'&&window.liff&&liff.closeWindow) liff.closeWindow(); else location.reload(); });
+
+async function boot(){
+  // Stage 1 (laptop): if no LIFF id yet, run in preview mode — type a study_id, test the whole data path.
+  if(LIFF_ID && LIFF_ID!=='PASTE_YOUR_LIFF_ID' && window.liff){
+    try{
+      await liff.init({liffId:LIFF_ID});
+      if(!liff.isLoggedIn()){ liff.login(); return; }
+      const p=await liff.getProfile(); userId=p.userId; mode='liff';
+    }catch(e){ console.warn('LIFF init failed → preview mode',e); mode='preview'; }
+  }
+  if(mode==='preview') banner('โหมดทดสอบ (Preview) — ยังไม่ได้เชื่อมกับ LINE','preview');
+
+  if(API_URL==='PASTE_YOUR_APPS_SCRIPT_EXEC_URL'){ show('linkCard'); return; } // pure UI preview
+
+  if(mode==='liff'){
+    try{ const r=await api({action:'resolve',userId}); studyId=r.study_id; }catch(e){}
+    if(studyId){ startDiary(); return; }
+  }
+  show('linkCard');
+}
+boot();
+</script>
+</body>
+</html>
