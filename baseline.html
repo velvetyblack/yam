@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>แบบสอบถามข้อมูลพื้นฐาน — วิจัยยาฝังคุมกำเนิด</title>
+<!--
+  BASELINE questionnaire — the "Baseline LIFF" app.
+  This is a SEPARATE LIFF app from the diary (index.html = "Diary LIFF").
+  It is the participant's FIRST touchpoint: she types her Study ID once here,
+  and submitting WRITES THE LINK (LINE userId <-> study_id) + saves her answers.
+  Config below: BASELINE_LIFF_ID (its own LIFF ID!) + API_URL (same Apps Script /exec as the diary).
+-->
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#fff; --ink:#1f2328; --muted:#6b7280; --line:#e5e7eb;
+    --brand:#678DC6; --brand-dark:#4f6f9f; --accent:#678DC6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif;
+    font-size:16px;line-height:1.5}
+  .wrap{max-width:520px;margin:0 auto;padding:16px 14px 40px}
+  h1{font-size:19px;margin:6px 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:14px;margin-bottom:12px}
+  .q{font-size:15px;font-weight:600;margin:0 0 8px}
+  label.fld{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
+  input[type=text],input[type=date]{width:100%;padding:10px 12px;font-size:16px;
+    border:1px solid var(--line);border-radius:10px;background:#fff}
+  textarea{width:100%;min-height:54px;padding:10px 12px;font-size:15px;
+    border:1px solid var(--line);border-radius:10px;resize:vertical}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:90px;padding:10px 6px;font-size:14px;border:1px solid var(--line);
+    background:#fff;border-radius:10px;color:var(--muted);cursor:pointer;line-height:1.2}
+  .seg button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .follow{margin-top:8px;display:none}
+  .follow.show{display:block}
+  .btn{display:block;width:100%;padding:14px;font-size:17px;font-weight:600;border:none;
+    border-radius:12px;background:var(--brand);color:#fff;cursor:pointer;margin-top:6px}
+  .btn:disabled{opacity:.5}
+  .ghost{background:#eef0f2;color:var(--ink)}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+  .banner{padding:8px 12px;border-radius:10px;font-size:13px;margin-bottom:12px}
+  .banner.preview{background:#fff7e6;border:1px solid #f0b429;color:#7a5a00}
+  .ok{text-align:center;padding:26px 10px}
+  .ok .big{font-size:48px}
+  .hidden{display:none}
+  .err{color:#b3261e;font-size:13px;margin-top:6px;display:none}
+  .err.show{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="banner"></div>
+  <h1>แบบสอบถามข้อมูลพื้นฐาน</h1>
+  <p class="sub">งานวิจัยการคุมกำเนิดชนิดฝัง • โรงพยาบาลจุฬาลงกรณ์<br>กรอกครั้งแรกเพียงครั้งเดียว</p>
+
+  <!-- FORM -->
+  <div id="formCard" class="hidden">
+
+    <div class="card">
+      <p class="q">รหัสอาสาสมัคร (Study ID)</p>
+      <input id="sidInput" type="text" inputmode="latin" autocapitalize="characters" placeholder="เช่น P001">
+      <p class="hint">กรอกรหัสที่ได้รับจากเจ้าหน้าที่</p>
+    </div>
+
+    <div class="card" data-q="implant_type">
+      <p class="q">1. ฝังยาคุมกำเนิดแบบใด</p>
+      <div class="seg">
+        <button data-v="5yr">แบบ 5 ปี</button>
+        <button data-v="3yr">แบบ 3 ปี</button>
+      </div>
+    </div>
+
+    <div class="card" data-q="prior_bothersome_bleeding">
+      <p class="q">2. เคยมีภาวะเลือดออกที่สร้างความรำคาญหลังจากฝังยาคุมหรือไม่</p>
+      <div class="seg">
+        <button data-v="yes">เคย</button>
+        <button data-v="no">ไม่เคย</button>
+      </div>
+    </div>
+
+    <div class="card" data-q="prior_bleeding_treatment">
+      <p class="q">3. เคยใช้ยาเพื่อรักษาภาวะเลือดออกหลังฝังยาคุมหรือไม่</p>
+      <div class="seg">
+        <button data-v="yes">เคย</button>
+        <button data-v="no">ไม่เคย</button>
+      </div>
+    </div>
+
+    <div class="card" data-q="postpartum_6wk">
+      <p class="q">4. ท่านเพิ่งคลอดบุตรใน 6 สัปดาห์ที่ผ่านมาหรือไม่</p>
+      <div class="seg">
+        <button data-v="yes">ใช่</button>
+        <button data-v="no">ไม่ใช่</button>
+      </div>
+    </div>
+
+    <div class="card" data-q="breastfeeding">
+      <p class="q">5. ขณะนี้กำลังให้นมบุตรอยู่หรือไม่</p>
+      <div class="seg">
+        <button data-v="yes">ใช่</button>
+        <button data-v="no">ไม่ใช่</button>
+      </div>
+    </div>
+
+    <div class="card" data-q="lmp">
+      <p class="q">6. วันแรกของประจำเดือนรอบล่าสุด</p>
+      <div class="seg">
+        <button data-v="date">ระบุวันที่</button>
+        <button data-v="จำไม่ได้">จำไม่ได้</button>
+        <button data-v="กระปริดกระปรอย">กระปริดกระปรอย</button>
+      </div>
+      <div class="follow" id="lmpDateBox">
+        <label class="fld">เลือกวันที่</label>
+        <input id="lmpDate" type="date">
+      </div>
+    </div>
+
+    <div class="card" data-q="comorbidities_yn">
+      <p class="q">7. มีโรคประจำตัวหรือไม่</p>
+      <div class="seg">
+        <button data-v="yes">มี</button>
+        <button data-v="no">ไม่มี</button>
+      </div>
+      <div class="follow" id="comorbBox">
+        <label class="fld">โปรดระบุ</label>
+        <textarea id="comorbText" placeholder="เช่น เบาหวาน ความดันโลหิตสูง"></textarea>
+      </div>
+    </div>
+
+    <div class="card" data-q="medications_yn">
+      <p class="q">8. มียาที่ทานเป็นประจำหรือไม่</p>
+      <div class="seg">
+        <button data-v="yes">มี</button>
+        <button data-v="no">ไม่มี</button>
+      </div>
+      <div class="follow" id="medsBox">
+        <label class="fld">โปรดระบุ</label>
+        <textarea id="medsText" placeholder="เช่น ยาลดความดัน วิตามิน"></textarea>
+      </div>
+    </div>
+
+    <div class="card" data-q="smoking">
+      <p class="q">9. สูบบุหรี่หรือไม่</p>
+      <div class="seg">
+        <button data-v="yes">สูบ</button>
+        <button data-v="no">ไม่สูบ</button>
+      </div>
+    </div>
+
+    <p class="err" id="errMsg"></p>
+    <button id="saveBtn" class="btn">ส่งแบบสอบถาม</button>
+    <p class="hint">ข้อมูลจะถูกบันทึกแบบไม่ระบุชื่อ</p>
+  </div>
+
+  <!-- ALREADY DONE -->
+  <div id="alreadyCard" class="card ok hidden">
+    <div class="big">✅</div>
+    <p style="font-size:18px;font-weight:600;margin:6px 0">ท่านได้กรอกแบบสอบถามนี้แล้ว</p>
+    <p class="sub">ขอบคุณค่ะ ไม่ต้องกรอกซ้ำ</p>
+    <button id="closeBtn1" class="btn" style="margin-top:8px">ปิดหน้าต่าง</button>
+  </div>
+
+  <!-- DONE -->
+  <div id="doneCard" class="card ok hidden">
+    <div class="big">✅</div>
+    <p style="font-size:18px;font-weight:600;margin:6px 0">บันทึกเรียบร้อยแล้ว ขอบคุณค่ะ</p>
+    <p class="sub" id="doneMsg">ท่านจะได้รับข้อความเตือนให้บันทึกอาการเลือดออกทุกวันอาทิตย์ทาง LINE</p>
+    <button id="closeBtn2" class="btn" style="margin-top:8px">ปิดหน้าต่าง</button>
+  </div>
+
+  <!-- loading -->
+  <div id="loading" class="card">กำลังโหลด…</div>
+
+</div>
+
+<script>
+/* ================= CONFIG — fill these two ================= */
+/* BASELINE_LIFF_ID = the LIFF ID of THIS page's own LIFF app  */
+/* (a SECOND LIFF app — do NOT reuse the diary's LIFF ID).     */
+/* API_URL = the SAME Apps Script /exec URL as the diary.      */
+const BASELINE_LIFF_ID = 'PASTE_BASELINE_LIFF_ID';
+const API_URL = 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL';
+/* =========================================================== */
+
+let userId = null, mode = 'preview';
+const answers = {};   // qname -> value
+
+const $ = id => document.getElementById(id);
+function show(id){ ['formCard','alreadyCard','doneCard','loading'].forEach(x=>$(x).classList.add('hidden')); $(id).classList.remove('hidden'); }
+function banner(html,cls){ const b=$('banner'); if(!html){b.innerHTML='';return;} b.innerHTML='<div class="banner '+cls+'">'+html+'</div>'; }
+
+async function api(payload){
+  const res = await fetch(API_URL, { method:'POST', body: JSON.stringify(payload) }); // text/plain => no preflight
+  const txt = await res.text();
+  try { return JSON.parse(txt); } catch(e){ throw new Error('API response not JSON: '+txt.slice(0,120)); }
+}
+
+/* chip behaviour for every question card */
+document.querySelectorAll('[data-q]').forEach(card=>{
+  const q = card.dataset.q;
+  card.querySelectorAll('.seg button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      answers[q] = b.dataset.v;
+      card.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on', x===b));
+      // conditional follow-ups
+      if(q==='lmp') $('lmpDateBox').classList.toggle('show', b.dataset.v==='date');
+      if(q==='comorbidities_yn') $('comorbBox').classList.toggle('show', b.dataset.v==='yes');
+      if(q==='medications_yn') $('medsBox').classList.toggle('show', b.dataset.v==='yes');
+      err('');
+    });
+  });
+});
+
+function err(msg){ const e=$('errMsg'); e.textContent=msg; e.classList.toggle('show', !!msg); }
+
+function validate(){
+  const sid = $('sidInput').value.trim();
+  if(!sid) return 'กรุณากรอก Study ID';
+  const need = [
+    ['implant_type','ข้อ 1'], ['prior_bothersome_bleeding','ข้อ 2'], ['prior_bleeding_treatment','ข้อ 3'],
+    ['postpartum_6wk','ข้อ 4'], ['breastfeeding','ข้อ 5'], ['lmp','ข้อ 6'],
+    ['comorbidities_yn','ข้อ 7'], ['medications_yn','ข้อ 8'], ['smoking','ข้อ 9']
+  ];
+  for(const [q,label] of need){ if(!answers[q]) return 'กรุณาตอบ'+label; }
+  if(answers.lmp==='date' && !$('lmpDate').value) return 'กรุณาเลือกวันที่ประจำเดือน (ข้อ 6)';
+  if(answers.comorbidities_yn==='yes' && !$('comorbText').value.trim()) return 'กรุณาระบุโรคประจำตัว (ข้อ 7)';
+  if(answers.medications_yn==='yes' && !$('medsText').value.trim()) return 'กรุณาระบุยาที่ทานเป็นประจำ (ข้อ 8)';
+  return null;
+}
+
+async function save(){
+  const problem = validate();
+  if(problem){ err(problem); return; }
+  if(mode!=='liff' || !userId){ alert('โหมดทดสอบ: ต้องเปิดผ่านแอป LINE เท่านั้นจึงจะบันทึกได้'); return; }
+  $('saveBtn').disabled = true;
+  const payload = {
+    action: 'baseline',
+    userId,
+    study_id: $('sidInput').value.trim().toUpperCase(),
+    answers: {
+      implant_type: answers.implant_type,
+      prior_bothersome_bleeding: answers.prior_bothersome_bleeding,
+      prior_bleeding_treatment: answers.prior_bleeding_treatment,
+      postpartum_6wk: answers.postpartum_6wk,
+      breastfeeding: answers.breastfeeding,
+      lmp: (answers.lmp==='date' ? $('lmpDate').value : answers.lmp),
+      comorbidities_yn: answers.comorbidities_yn,
+      comorbidities_text: (answers.comorbidities_yn==='yes' ? $('comorbText').value.trim() : ''),
+      medications_yn: answers.medications_yn,
+      medications_text: (answers.medications_yn==='yes' ? $('medsText').value.trim() : ''),
+      smoking: answers.smoking
+    }
+  };
+  try{
+    const r = await api(payload);
+    if(!r.ok) throw new Error(r.error || 'save failed');
+    if(r.already){ show('alreadyCard'); }
+    else show('doneCard');
+  }catch(e){ alert('บันทึกไม่สำเร็จ: ' + e.message); }
+  $('saveBtn').disabled = false;
+}
+
+function closeApp(){ if(mode==='liff' && window.liff && liff.closeWindow) liff.closeWindow(); else location.reload(); }
+$('saveBtn').addEventListener('click', save);
+$('closeBtn1').addEventListener('click', closeApp);
+$('closeBtn2').addEventListener('click', closeApp);
+
+async function boot(){
+  if(BASELINE_LIFF_ID && BASELINE_LIFF_ID!=='PASTE_BASELINE_LIFF_ID' && window.liff){
+    try{
+      await liff.init({liffId: BASELINE_LIFF_ID});
+      if(!liff.isLoggedIn()){ liff.login(); return; }
+      const p = await liff.getProfile(); userId = p.userId; mode = 'liff';
+    }catch(e){ console.warn('LIFF init failed → preview mode', e); mode = 'preview'; }
+  }
+  if(mode==='preview'){
+    banner('โหมดทดสอบ (Preview) — ยังไม่ได้เชื่อมกับ LINE ดูหน้าตาได้ แต่บันทึกไม่ได้','preview');
+    show('formCard'); return;
+  }
+  // already linked + already answered? then don't show the form again
+  try{
+    const r = await api({action:'bstatus', userId});
+    if(r.ok && r.baseline_done){ show('alreadyCard'); return; }
+    if(r.ok && r.study_id) $('sidInput').value = r.study_id;   // linked but questionnaire missing -> prefill
+  }catch(e){ /* fall through to the form */ }
+  show('formCard');
+}
+boot();
+</script>
+</body>
+</html>
