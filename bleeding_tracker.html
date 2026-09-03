@@ -32,7 +32,7 @@
   label.fld{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
   input[type=text],input[type=date]{width:100%;padding:10px 12px;font-size:16px;
     border:1px solid var(--line);border-radius:10px;background:#fff}
-  .day{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
+  .day{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
   .day:first-child{border-top:none}
   .dlabel{flex:0 0 88px;font-size:13px}
   .dlabel b{display:block;font-size:15px}
@@ -42,7 +42,7 @@
   .seg button.on[data-v=none]{background:var(--none);border-color:var(--none);color:#fff}
   .seg button.on[data-v=spotting]{background:var(--spot);border-color:var(--spot);color:#3a2c00}
   .seg button.on[data-v=bleeding]{background:var(--bleed);border-color:var(--bleed);color:#fff}
-  .both{flex:0 0 100%;margin:4px 0 0 96px;font-size:13px;color:var(--accent);display:none}
+  ..both{flex:0 0 100%;margin:4px 0 0;padding-left:96px;font-size:13px;color:var(--accent);display:none}
   .both.show{display:flex;align-items:center;gap:6px}
   .both input{width:18px;height:18px;accent-color:var(--accent)}
   textarea{width:100%;min-height:54px;padding:10px 12px;font-size:15px;
