@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>บันทึกอาหารและการออกกำลังกาย</title>
+<!--
+  Diet & exercise DIARY — Inbody implant research (weight change study).
+  ONE LIFF app. Linking is via a PRE-FILLED link the staff sends:
+      https://liff.line.me/<LIFF_ID>?sid=IMPL-0142
+  First tap: LIFF reads userId + sid and claims the participant's prepopulated LineMap row
+  (zero typing). Later taps: identified automatically. No sid + not linked -> "ไม่พบ Study ID".
+  Free text is stored VERBATIM — no processing here or in the backend.
+  Config below: LIFF_ID + API_URL (the Apps Script /exec URL).
+-->
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#fff; --ink:#1f2328; --muted:#6b7280; --line:#e5e7eb;
+    --brand:#5b8c5a; --brand-dark:#456b45; --accent:#5b8c5a; --danger:#e5484d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif;
+    font-size:16px;line-height:1.5}
+  .wrap{max-width:520px;margin:0 auto;padding:16px 14px 40px}
+  h1{font-size:19px;margin:6px 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .who{font-size:13px;color:var(--muted)}
+  .who b{color:var(--ink)}
+  label.fld{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
+  input[type=date]{width:100%;padding:10px 12px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .row{border-top:1px solid var(--line);padding:12px 0}
+  .row:first-child{border-top:none}
+  .rowhead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  select{flex:1;padding:9px 10px;font-size:15px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .rm{flex:0 0 auto;width:34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:9px;
+    color:var(--danger);font-size:18px;line-height:1;cursor:pointer}
+  textarea{width:100%;min-height:52px;padding:10px 12px;font-size:15px;border:1px solid var(--line);border-radius:10px;resize:vertical}
+  .add{display:block;width:100%;padding:11px;font-size:15px;border:1.5px dashed var(--brand);
+    background:#fff;color:var(--brand-dark);border-radius:11px;cursor:pointer;margin-top:4px}
+  .btn{display:block;width:100%;padding:14px;font-size:17px;font-weight:600;border:none;border-radius:12px;
+    background:var(--brand);color:#fff;cursor:pointer;margin-top:6px}
+  .btn:disabled{opacity:.5}
+  .ghost{background:#eef0f2;color:var(--ink)}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+  .banner{padding:8px 12px;border-radius:10px;font-size:13px;margin-bottom:12px}
+  .banner.preview{background:#fff7e6;border:1px solid #f0b429;color:#7a5a00}
+  .ok{text-align:center;padding:26px 10px}
+  .ok .big{font-size:48px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="banner"></div>
+  <h1>บันทึกอาหารและการออกกำลังกาย</h1>
+  <p class="sub">งานวิจัยการคุมกำเนิดและน้ำหนักตัว • โรงพยาบาลจุฬาลงกรณ์</p>
+
+  <!-- not linked / bad link -->
+  <div id="notFoundCard" class="card ok hidden">
+    <div class="big">⚠️</div>
+    <p style="font-size:18px;font-weight:600;margin:6px 0" id="nfTitle">ไม่พบ Study ID</p>
+    <p class="sub" id="nfMsg">กรุณาติดต่อผู้วิจัย</p>
+    <button id="closeBtnNF" class="btn" style="margin-top:8px">ปิดหน้าต่าง</button>
+  </div>
+
+  <!-- diary -->
+  <div id="diaryCard" class="hidden">
+    <div class="card">
+      <div class="who">อาสาสมัคร: <b id="whoSid">—</b></div>
+      <label class="fld" style="margin-top:10px">วันที่บันทึก</label>
+      <input id="entryDate" type="date">
+      <p class="hint">บันทึกได้ทั้งแบบทีละมื้อ หรือกรอกหลายรายการพร้อมกันในครั้งเดียว • พิมพ์เป็นข้อความอิสระได้เลย เช่น “ข้าวกะเพราหมูไข่ดาว 1 จาน”, “วิ่ง 30 นาที”</p>
+    </div>
+
+    <div class="card">
+      <div id="rows"><!-- entry rows injected --></div>
+      <button id="addBtn" class="add">＋ เพิ่มรายการ</button>
+    </div>
+
+    <button id="saveBtn" class="btn">บันทึกข้อมูล</button>
+    <p class="hint">ข้อมูลจะถูกบันทึกแบบไม่ระบุชื่อ</p>
+  </div>
+
+  <!-- done -->
+  <div id="doneCard" class="card ok hidden">
+    <div class="big">✅</div>
+    <p style="font-size:18px;font-weight:600;margin:6px 0">บันทึกเรียบร้อยแล้ว ขอบคุณค่ะ</p>
+    <p class="sub" id="doneMsg"></p>
+    <button id="againBtn" class="btn ghost">บันทึกเพิ่ม</button>
+    <button id="closeBtn" class="btn" style="margin-top:8px">ปิดหน้าต่าง</button>
+  </div>
+
+  <div id="loading" class="card">กำลังโหลด…</div>
+
+</div>
+
+<script>
+/* ======================= CONFIG — fill these two ======================= */
+const LIFF_ID  = 'PASTE_YOUR_LIFF_ID';                 // this diary's LIFF ID (LINE Developers > LIFF)
+const API_URL  = 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL';    // the /exec URL from Apps Script deploy
+/* ====================================================================== */
+
+const CATEGORIES = ['เช้า','เที่ยง','เย็น','อาหารว่าง','ออกกำลังกาย'];
+const DEFAULT_ROWS = ['เช้า','เที่ยง','เย็น','ออกกำลังกาย'];   // prefilled (empty text) — fill what applies
+
+let userId = null, studyId = null, mode = 'preview';
+
+const $ = id => document.getElementById(id);
+function show(id){ ['notFoundCard','diaryCard','doneCard','loading'].forEach(x=>$(x).classList.add('hidden')); $(id).classList.remove('hidden'); }
+function banner(html,cls){ const b=$('banner'); if(!html){b.innerHTML='';return;} b.innerHTML='<div class="banner '+cls+'">'+html+'</div>'; }
+
+async function api(payload){
+  const res = await fetch(API_URL, { method:'POST', body: JSON.stringify(payload) }); // text/plain => no preflight
+  const txt = await res.text();
+  try { return JSON.parse(txt); } catch(e){ throw new Error('API response not JSON: '+txt.slice(0,120)); }
+}
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+/* -------- entry rows -------- */
+function addRow(cat){
+  const wrap = document.createElement('div'); wrap.className='row';
+  const opts = CATEGORIES.map(c=>'<option value="'+c+'"'+(c===cat?' selected':'')+'>'+c+'</option>').join('');
+  wrap.innerHTML =
+    '<div class="rowhead"><select>'+opts+'</select>'+
+    '<button type="button" class="rm" title="ลบรายการนี้">×</button></div>'+
+    '<textarea placeholder="พิมพ์รายการ เช่น ข้าวกะเพราหมูไข่ดาว 1 จาน / วิ่ง 30 นาที"></textarea>';
+  wrap.querySelector('.rm').addEventListener('click',()=>{
+    const rows=$('rows'); if(rows.children.length>1) wrap.remove(); else { wrap.querySelector('textarea').value=''; }
+  });
+  $('rows').appendChild(wrap);
+}
+function resetRows(){ $('rows').innerHTML=''; DEFAULT_ROWS.forEach(addRow); }
+
+async function save(){
+  $('saveBtn').disabled=true;
+  const entry_date = $('entryDate').value || ymd(new Date());
+  const items = [];
+  $('rows').querySelectorAll('.row').forEach(row=>{
+    const text = row.querySelector('textarea').value.trim();
+    if(text) items.push({ category: row.querySelector('select').value, text });
+  });
+  if(!items.length){ alert('กรุณากรอกอย่างน้อย 1 รายการ'); $('saveBtn').disabled=false; return; }
+  try{
+    const r = await api({ action:'submit', userId, entry_date, items, source:'self' });
+    if(!r.ok) throw new Error(r.error||'save failed');
+    $('doneMsg').textContent='บันทึก '+r.saved+' รายการ • วันที่ '+r.entry_date+' (รหัส '+r.study_id+')';
+    show('doneCard');
+  }catch(e){ alert('บันทึกไม่สำเร็จ: '+e.message); }
+  $('saveBtn').disabled=false;
+}
+
+function startDiary(){
+  $('whoSid').textContent = studyId;
+  $('entryDate').value = ymd(new Date());   // default today, editable
+  resetRows();
+  show('diaryCard');
+}
+function notFound(title,msg){ if(title)$('nfTitle').textContent=title; if(msg)$('nfMsg').textContent=msg; show('notFoundCard'); }
+
+$('addBtn').addEventListener('click',()=>addRow(CATEGORIES[0]));
+$('saveBtn').addEventListener('click',save);
+$('againBtn').addEventListener('click',startDiary);
+function closeApp(){ if(mode==='liff'&&window.liff&&liff.closeWindow) liff.closeWindow(); else location.reload(); }
+$('closeBtn').addEventListener('click',closeApp);
+$('closeBtnNF').addEventListener('click',closeApp);
+
+/* -------- read sid from the pre-filled link (?sid=... or inside liff.state) -------- */
+function getSid(){
+  try{
+    const q = new URLSearchParams(location.search);
+    if(q.get('sid')) return q.get('sid');
+    const ls = q.get('liff.state');       // LINE sometimes nests the query here
+    if(ls){ const inner = new URLSearchParams(ls.replace(/^\?/,'')); if(inner.get('sid')) return inner.get('sid'); }
+  }catch(e){}
+  return '';
+}
+
+async function boot(){
+  if(LIFF_ID && LIFF_ID!=='PASTE_YOUR_LIFF_ID' && window.liff){
+    try{
+      await liff.init({liffId:LIFF_ID});
+      if(!liff.isLoggedIn()){ liff.login(); return; }
+      const p=await liff.getProfile(); userId=p.userId; mode='liff';
+    }catch(e){ console.warn('LIFF init failed → preview mode',e); mode='preview'; }
+  }
+  if(mode==='preview'){
+    banner('โหมดทดสอบ (Preview) — ยังไม่ได้เชื่อมกับ LINE','preview');
+    notFound('โหมดทดสอบ','เปิดผ่านลิงก์ในแอป LINE เพื่อใช้งานจริง'); return;
+  }
+
+  const sid = getSid();
+  try{
+    if(sid){
+      const r = await api({ action:'link', userId, sid });
+      if(r.ok){ studyId=r.study_id; }
+      else if(r.conflict){ studyId=r.study_id; }                 // already linked to her own id — proceed
+      else if(r.taken){ return notFound('ลิงก์นี้ถูกใช้ไปแล้ว','บัญชี LINE ไม่ตรงกับรหัสนี้ กรุณาติดต่อผู้วิจัย'); }
+      else { return notFound('ไม่พบ Study ID','กรุณาติดต่อผู้วิจัย'); }   // sid not in roster
+    } else {
+      const r = await api({ action:'resolve', userId });
+      studyId = r.study_id;
+    }
+  }catch(e){ console.warn(e); }
+
+  if(studyId) startDiary();
+  else notFound('ไม่พบ Study ID','กรุณาเปิดจากลิงก์ที่ผู้วิจัยส่งให้ หรือติดต่อผู้วิจัย');
+}
+boot();
+</script>
+</body>
+</html>
