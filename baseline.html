@@ -7,8 +7,9 @@
 <!--
   BASELINE questionnaire — the "Baseline LIFF" app.
   This is a SEPARATE LIFF app from the diary (index.html = "Diary LIFF").
-  It is the participant's FIRST touchpoint: she types her Study ID once here,
-  and submitting WRITES THE LINK (LINE userId <-> study_id) + saves her answers.
+  It is the participant's FIRST touchpoint, opened via her PERSONAL link
+  .../baseline?sid=STUDY_ID : the first tap CLAIMS her prepopulated LineMap row
+  (LINE userId <-> study_id) with NO typing, then she answers the 9 questions.
   Config below: BASELINE_LIFF_ID (its own LIFF ID!) + API_URL (same Apps Script /exec as the diary).
 -->
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -61,12 +62,6 @@
 
   <!-- FORM -->
   <div id="formCard" class="hidden">
-
-    <div class="card">
-      <p class="q">รหัสอาสาสมัคร (Study ID)</p>
-      <input id="sidInput" type="text" inputmode="latin" autocapitalize="characters" placeholder="เช่น P001">
-      <p class="hint">กรอกรหัสที่ได้รับจากเจ้าหน้าที่</p>
-    </div>
 
     <div class="card" data-q="implant_type">
       <p class="q">1. ฝังยาคุมกำเนิดแบบใด</p>
@@ -166,6 +161,14 @@
     <button id="closeBtn1" class="btn" style="margin-top:8px">ปิดหน้าต่าง</button>
   </div>
 
+  <!-- BLOCKED / NOT FOUND -->
+  <div id="notFoundCard" class="card ok hidden">
+    <div class="big">🚫</div>
+    <p id="nfTitle" style="font-size:18px;font-weight:600;margin:6px 0">ไม่พบ Study ID</p>
+    <p class="sub" id="nfMsg">กรุณาเปิดจากลิงก์ที่ผู้วิจัยส่งให้ หรือติดต่อผู้วิจัย</p>
+    <button id="closeBtnNF" class="btn" style="margin-top:8px">ปิดหน้าต่าง</button>
+  </div>
+
   <!-- DONE -->
   <div id="doneCard" class="card ok hidden">
     <div class="big">✅</div>
@@ -192,7 +195,9 @@ let userId = null, mode = 'preview';
 const answers = {};   // qname -> value
 
 const $ = id => document.getElementById(id);
-function show(id){ ['formCard','alreadyCard','doneCard','loading'].forEach(x=>$(x).classList.add('hidden')); $(id).classList.remove('hidden'); }
+function show(id){ ['formCard','alreadyCard','notFoundCard','doneCard','loading'].forEach(x=>$(x).classList.add('hidden')); $(id).classList.remove('hidden'); }
+function notFound(title,msg){ if(title)$('nfTitle').textContent=title; if(msg)$('nfMsg').textContent=msg; show('notFoundCard'); }
+function getSid(){ try{ const q=new URLSearchParams(location.search); if(q.get('sid'))return q.get('sid'); const ls=q.get('liff.state'); if(ls){ const inner=new URLSearchParams(ls.replace(/^\?/,'')); if(inner.get('sid'))return inner.get('sid'); } }catch(e){} return ''; }
 function banner(html,cls){ const b=$('banner'); if(!html){b.innerHTML='';return;} b.innerHTML='<div class="banner '+cls+'">'+html+'</div>'; }
 
 async function api(payload){
@@ -220,8 +225,6 @@ document.querySelectorAll('[data-q]').forEach(card=>{
 function err(msg){ const e=$('errMsg'); e.textContent=msg; e.classList.toggle('show', !!msg); }
 
 function validate(){
-  const sid = $('sidInput').value.trim();
-  if(!sid) return 'กรุณากรอก Study ID';
   const need = [
     ['implant_type','ข้อ 1'], ['prior_bothersome_bleeding','ข้อ 2'], ['prior_bleeding_treatment','ข้อ 3'],
     ['postpartum_6wk','ข้อ 4'], ['breastfeeding','ข้อ 5'], ['lmp','ข้อ 6'],
@@ -242,7 +245,6 @@ async function save(){
   const payload = {
     action: 'baseline',
     userId,
-    study_id: $('sidInput').value.trim().toUpperCase(),
     answers: {
       implant_type: answers.implant_type,
       prior_bothersome_bleeding: answers.prior_bothersome_bleeding,
@@ -270,6 +272,7 @@ function closeApp(){ if(mode==='liff' && window.liff && liff.closeWindow) liff.c
 $('saveBtn').addEventListener('click', save);
 $('closeBtn1').addEventListener('click', closeApp);
 $('closeBtn2').addEventListener('click', closeApp);
+$('closeBtnNF').addEventListener('click', closeApp);
 
 async function boot(){
   if(BASELINE_LIFF_ID && BASELINE_LIFF_ID!=='PASTE_BASELINE_LIFF_ID' && window.liff){
@@ -283,11 +286,21 @@ async function boot(){
     banner('โหมดทดสอบ (Preview) — ยังไม่ได้เชื่อมกับ LINE ดูหน้าตาได้ แต่บันทึกไม่ได้','preview');
     show('formCard'); return;
   }
-  // already linked + already answered? then don't show the form again
+  // claim her prepopulated row from the personal ?sid= link (or she tapped it before)
+  const sid = getSid();
+  try{
+    if(sid){
+      const r = await api({action:'link', userId, sid});
+      if(r.taken){ return notFound('ลิงก์นี้ถูกใช้ไปแล้ว','บัญชี LINE ไม่ตรงกับรหัสนี้ กรุณาติดต่อผู้วิจัย'); }
+      if(!r.ok && r.notfound){ return notFound('ไม่พบ Study ID','กรุณาเปิดจากลิงก์ที่ผู้วิจัยส่งให้ หรือติดต่อผู้วิจัย'); }
+    }
+  }catch(e){ /* fall through to the status check */ }
+
+  // already answered? don't show the form again. not linked at all? block.
   try{
     const r = await api({action:'bstatus', userId});
     if(r.ok && r.baseline_done){ show('alreadyCard'); return; }
-    if(r.ok && r.study_id) $('sidInput').value = r.study_id;   // linked but questionnaire missing -> prefill
+    if(r.ok && !r.study_id){ return notFound('ไม่พบ Study ID','กรุณาเปิดจากลิงก์ที่ผู้วิจัยส่งให้ หรือติดต่อผู้วิจัย'); }
   }catch(e){ /* fall through to the form */ }
   show('formCard');
 }
