@@ -166,6 +166,7 @@
     <div class="big">🚫</div>
     <p id="nfTitle" style="font-size:18px;font-weight:600;margin:6px 0">ไม่พบ Study ID</p>
     <p class="sub" id="nfMsg">กรุณาเปิดจากลิงก์ที่ผู้วิจัยส่งให้ หรือติดต่อผู้วิจัย</p>
+    <p class="hint" id="nfDiag" style="word-break:break-all"></p>
     <button id="closeBtnNF" class="btn" style="margin-top:8px">ปิดหน้าต่าง</button>
   </div>
 
@@ -188,7 +189,7 @@
 /* (a SECOND LIFF app — do NOT reuse the diary's LIFF ID).     */
 /* API_URL = the SAME Apps Script /exec URL as the diary.      */
 const BASELINE_LIFF_ID = '2011384405-lWF44PlD';
-const API_URL = 'https://script.google.com/macros/s/AKfycbxZwuN2YmHCC-1Ul9lW4vRRcSmhSkUGQlIQknMFJ7A4FaecCLWp-FZzt-68wo2vaGlx8A/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyrzMxYoxfG8hERFFjeqr1hvKKKQtpBc9FB4D0Im_96-9XWzP_cIMf9B7j0Fl_NFZg_nQ/exec';
 /* =========================================================== */
 
 let userId = null, mode = 'preview';
@@ -196,7 +197,7 @@ const answers = {};   // qname -> value
 
 const $ = id => document.getElementById(id);
 function show(id){ ['formCard','alreadyCard','notFoundCard','doneCard','loading'].forEach(x=>$(x).classList.add('hidden')); $(id).classList.remove('hidden'); }
-function notFound(title,msg){ if(title)$('nfTitle').textContent=title; if(msg)$('nfMsg').textContent=msg; show('notFoundCard'); }
+function notFound(title,msg,diag){ if(title)$('nfTitle').textContent=title; if(msg)$('nfMsg').textContent=msg; $('nfDiag').textContent=diag?('[diag] '+diag):''; show('notFoundCard'); }
 function getSid(){ try{ const q=new URLSearchParams(location.search); if(q.get('sid'))return q.get('sid'); const ls=q.get('liff.state'); if(ls){ const inner=new URLSearchParams(ls.replace(/^\?/,'')); if(inner.get('sid'))return inner.get('sid'); } }catch(e){} return ''; }
 function banner(html,cls){ const b=$('banner'); if(!html){b.innerHTML='';return;} b.innerHTML='<div class="banner '+cls+'">'+html+'</div>'; }
 
@@ -288,19 +289,22 @@ async function boot(){
   }
   // claim her prepopulated row from the personal ?sid= link (or she tapped it before)
   const sid = getSid();
-  try{
-    if(sid){
-      const r = await api({action:'link', userId, sid});
-      if(r.taken){ return notFound('ลิงก์นี้ถูกใช้ไปแล้ว','บัญชี LINE ไม่ตรงกับรหัสนี้ กรุณาติดต่อผู้วิจัย'); }
-      if(!r.ok && r.notfound){ return notFound('ไม่พบ Study ID','กรุณาเปิดจากลิงก์ที่ผู้วิจัยส่งให้ หรือติดต่อผู้วิจัย'); }
-    }
-  }catch(e){ /* fall through to the status check */ }
+  const diag = 'sid='+(sid||'(none)')+' url='+location.href.slice(0,160);
+  if(sid){
+    let r;
+    try{ r = await api({action:'link', userId, sid}); }
+    catch(e){ return notFound('เชื่อมต่อไม่สำเร็จ','กรุณาลองใหม่ หรือติดต่อผู้วิจัย', diag+' link-error='+e.message); }
+    if(r.taken){ return notFound('ลิงก์นี้ถูกใช้ไปแล้ว','บัญชี LINE ไม่ตรงกับรหัสนี้ กรุณาติดต่อผู้วิจัย', diag); }
+    if(!r.ok && r.notfound){ return notFound('ไม่พบ Study ID','กรุณาเปิดจากลิงก์ที่ผู้วิจัยส่งให้ หรือติดต่อผู้วิจัย', diag+' link=notfound'); }
+    if(!r.ok){ return notFound('เกิดข้อผิดพลาด','กรุณาติดต่อผู้วิจัย', diag+' link-response='+JSON.stringify(r)); }
+  }
 
   // already answered? don't show the form again. not linked at all? block.
   try{
     const r = await api({action:'bstatus', userId});
     if(r.ok && r.baseline_done){ show('alreadyCard'); return; }
-    if(r.ok && !r.study_id){ return notFound('ไม่พบ Study ID','กรุณาเปิดจากลิงก์ที่ผู้วิจัยส่งให้ หรือติดต่อผู้วิจัย'); }
+    if(r.ok && !r.study_id){ return notFound('ไม่พบ Study ID','กรุณาเปิดจากลิงก์ที่ผู้วิจัยส่งให้ หรือติดต่อผู้วิจัย', diag+' bstatus=unlinked'); }
+    if(!r.ok){ return notFound('เกิดข้อผิดพลาด','กรุณาติดต่อผู้วิจัย', diag+' bstatus-response='+JSON.stringify(r)); }
   }catch(e){ /* fall through to the form */ }
   show('formCard');
 }
