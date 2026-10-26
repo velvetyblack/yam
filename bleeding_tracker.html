@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>บันทึกเลือดออกทางช่องคลอด</title>
 <!--
-  Weekly bleeding DIARY — the "Diary LIFF" app.
-  This is a SEPARATE LIFF app from the baseline questionnaire (baseline.html = "Baseline LIFF").
-  There is NO Study ID box here: the participant is identified automatically from LineMap,
-  which was written when she submitted the baseline questionnaire.
-  Not linked yet (baseline not done) -> "ไม่พบ Study ID กรุณาติดต่อผู้วิจัย".
+  28-day bleeding DIARY — the "Diary LIFF" app (v4, 26/10/2026; was weekly in v3).
+  SEPARATE LIFF app from the baseline questionnaire (baseline.html = "Baseline LIFF").
+  NO Study ID box: participant identified automatically from LineMap.
+  Follow-up = 7 periods x 28 days. Period 1 starts on the Sunday on/before her linked_at
+  (server returns p1_start via action 'resolve').
+  Per day: none / spotting / bleeding. Bothersome: one question per WEEK (only weeks with
+  spotting/bleeding). Treatment + note: once per period.
   Config below: LIFF_ID (the DIARY's own LIFF ID) + API_URL (same Apps Script /exec as baseline).
 -->
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -25,46 +27,60 @@
   .wrap{max-width:520px;margin:0 auto;padding:16px 14px 40px}
   h1{font-size:19px;margin:6px 0 2px}
   .sub{color:var(--muted);font-size:13px;margin:0 0 14px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
-    padding:14px;margin-bottom:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
   .who{font-size:13px;color:var(--muted)}
   .who b{color:var(--ink)}
-  label.fld{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
-  input[type=text],input[type=date]{width:100%;padding:10px 12px;font-size:16px;
-    border:1px solid var(--line);border-radius:10px;background:#fff}
-  .day{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
-  .day:first-child{border-top:none}
-  .dlabel{flex:0 0 88px;font-size:13px}
-  .dlabel b{display:block;font-size:15px}
-  .seg{display:flex;gap:6px;flex:1}
-  .seg button{flex:1;padding:9px 4px;font-size:13px;border:1px solid var(--line);
-    background:#fff;border-radius:10px;color:var(--muted);cursor:pointer;line-height:1.15}
-  .seg button.on[data-v=none]{background:var(--none);border-color:var(--none);color:#fff}
-  .seg button.on[data-v=spotting]{background:var(--spot);border-color:var(--spot);color:#3a2c00}
-  .seg button.on[data-v=bleeding]{background:var(--bleed);border-color:var(--bleed);color:#fff}
-  ..both{flex:0 0 100%;margin:4px 0 0;padding-left:96px;font-size:13px;color:var(--accent);display:none}
-  .both.show{display:flex;align-items:center;gap:6px}
-  .both input{width:18px;height:18px;accent-color:var(--accent)}
-  textarea{width:100%;min-height:54px;padding:10px 12px;font-size:15px;
-    border:1px solid var(--line);border-radius:10px;resize:vertical}
+  label.fld,.fld{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
+  textarea{width:100%;min-height:54px;padding:10px 12px;font-size:15px;border:1px solid var(--line);border-radius:10px;resize:vertical}
   .btn{display:block;width:100%;padding:14px;font-size:17px;font-weight:600;border:none;
     border-radius:12px;background:var(--brand);color:#fff;cursor:pointer;margin-top:6px}
   .btn:disabled{opacity:.5}
   .ghost{background:#eef0f2;color:var(--ink)}
-  .btn{background:var(--brand)}
-  .weeks{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
-  .weeks button{padding:8px 11px;font-size:13px;border:1px solid var(--line);background:#fff;
-    border-radius:999px;color:var(--brand-dark);cursor:pointer;line-height:1.2}
-  .weeks button.on{background:var(--brand);border-color:var(--brand);color:#fff}
-  .nobleed{background:#fff;border:1.5px solid var(--brand);color:var(--brand-dark);margin-bottom:12px}
-  .nobleed.done{background:var(--none);border-color:var(--none);color:#fff}
+  .periods{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px}
+  .periods button{padding:7px 10px;font-size:12px;border:1px solid var(--line);background:#fff;
+    border-radius:12px;color:var(--brand-dark);cursor:pointer;line-height:1.25;text-align:center}
+  .periods button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .periods button:disabled{opacity:.35;cursor:default}
+  .periods small{display:block;font-size:11px;opacity:.85}
+  /* brush */
+  .brush{display:flex;gap:6px;margin:4px 0 6px}
+  .brush button{flex:1;padding:10px 4px;font-size:14px;border:2px solid var(--line);background:#fff;
+    border-radius:10px;cursor:pointer;line-height:1.15;font-weight:600}
+  .brush button[data-v=none]{color:#4b5563}
+  .brush button[data-v=spotting]{color:#8a6400}
+  .brush button[data-v=bleeding]{color:#b4232a}
+  .brush button.on[data-v=none]{background:var(--none);border-color:var(--none);color:#fff}
+  .brush button.on[data-v=spotting]{background:var(--spot);border-color:var(--spot);color:#3a2c00}
+  .brush button.on[data-v=bleeding]{background:var(--bleed);border-color:var(--bleed);color:#fff}
+  /* calendar */
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal .hd{font-size:11px;color:var(--muted);text-align:center;padding-bottom:2px}
+  .cal .d{border:1px solid var(--line);border-radius:8px;min-height:50px;padding:3px 2px;text-align:center;
+    cursor:pointer;background:#fff;user-select:none;-webkit-user-select:none}
+  .cal .d .n{font-size:11px;color:var(--muted)}
+  .cal .d .s{font-size:11px;font-weight:700;margin-top:2px;line-height:1.1}
+  .cal .d.none{background:var(--none);border-color:var(--none)} .cal .d.none .n,.cal .d.none .s{color:#fff}
+  .cal .d.spotting{background:var(--spot);border-color:var(--spot)} .cal .d.spotting .n,.cal .d.spotting .s{color:#3a2c00}
+  .cal .d.bleeding{background:var(--bleed);border-color:var(--bleed)} .cal .d.bleeding .n,.cal .d.bleeding .s{color:#fff}
+  .cal .d.future{background:#f3f4f6;border-style:dashed;cursor:default;opacity:.5}
+  .cal .wk{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:4px}
+  .fill{background:#fff;border:1.5px solid var(--brand);color:var(--brand-dark);margin-top:10px;font-size:15px;padding:11px}
+  .progress{font-size:13px;color:var(--muted);margin-top:8px}
+  .progress b{color:var(--ink)}
+  /* weekly bothersome */
+  .wq{padding:10px 0;border-top:1px solid var(--line)}
+  .wq:first-of-type{border-top:none}
+  .wq .t{font-size:14px;margin-bottom:6px}
+  .yn{display:flex;gap:6px}
+  .yn button{flex:1;padding:9px;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:10px;cursor:pointer;color:var(--muted)}
+  .yn button.on{background:var(--brand);border-color:var(--brand);color:#fff}
   .hint{font-size:12px;color:var(--muted);margin-top:8px}
   .banner{padding:8px 12px;border-radius:10px;font-size:13px;margin-bottom:12px}
   .banner.preview{background:#fff7e6;border:1px solid #f0b429;color:#7a5a00}
   .ok{text-align:center;padding:26px 10px}
   .ok .big{font-size:48px}
   .hidden{display:none}
-  .legend{font-size:12px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+  .legend{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.45}
 </style>
 </head>
 <body>
@@ -74,7 +90,7 @@
   <h1>บันทึกเลือดออกทางช่องคลอด</h1>
   <p class="sub">งานวิจัยการคุมกำเนิดชนิดฝัง • โรงพยาบาลจุฬาลงกรณ์</p>
 
-  <!-- STEP: not linked (baseline questionnaire not done yet) -->
+  <!-- STEP: not linked -->
   <div id="notFoundCard" class="card ok hidden">
     <div class="big">⚠️</div>
     <p style="font-size:18px;font-weight:600;margin:6px 0">ไม่พบ Study ID</p>
@@ -86,29 +102,42 @@
   <div id="diaryCard" class="hidden">
     <div class="card">
       <div class="who">อาสาสมัคร: <b id="whoSid">—</b></div>
-      <label class="fld" style="margin-top:10px">เลือกสัปดาห์ที่ต้องการบันทึก</label>
-      <div class="weeks" id="weekChips"></div>
-      <label class="fld">หรือเลือกวันเริ่มต้นเอง</label>
-      <input id="weekStart" type="date">
+      <div class="fld" style="margin-top:10px">เลือกช่วง 4 สัปดาห์ที่ต้องการบันทึก</div>
+      <div class="periods" id="periodChips"></div>
+    </div>
+
+    <div class="card">
+      <div class="fld">1) เลือกสถานะ แล้วแตะวันที่ในปฏิทิน (แตะซ้ำเพื่อลบ)</div>
+      <div class="brush" id="brush">
+        <button data-v="none">ไม่มี</button>
+        <button data-v="spotting">กะปริบ<br>กะปรอย</button>
+        <button data-v="bleeding">เลือด<br>ออก</button>
+      </div>
       <p class="legend">
         <b>ไม่มี</b> = ไม่มีเลือดออก &nbsp;•&nbsp;
         <b>กะปริบกะปรอย</b> = เลือดออกเล็กน้อย ไม่ต้องใช้ผ้าอนามัย &nbsp;•&nbsp;
         <b>เลือดออก</b> = ต้องใช้ผ้าอนามัย
       </p>
+      <div class="cal" id="cal" style="margin-top:10px"></div>
+      <button id="fillBtn" class="btn fill">✓ วันที่ยังว่างอยู่ ไม่มีเลือดออก</button>
+      <div class="progress" id="progress"></div>
     </div>
 
-    <button id="noBleedBtn" class="btn nobleed">✓ สัปดาห์นี้ไม่มีเลือดออกเลย (ทั้ง 7 วัน)</button>
-    <div class="card" id="grid"><!-- 7 days injected --></div>
+    <div class="card" id="weeklyCard">
+      <div class="fld">2) เลือดออกในแต่ละสัปดาห์ รบกวนการใช้ชีวิตหรือไม่</div>
+      <div id="weekly"></div>
+      <p class="hint" id="weeklyNone">ยังไม่มีสัปดาห์ที่มีเลือดออก — ไม่ต้องตอบข้อนี้</p>
+    </div>
 
     <div class="card">
-      <label class="fld">สัปดาห์นี้ได้รับยา/การรักษาเพื่อหยุดเลือดหรือไม่ (ถ้ามี ระบุ)</label>
+      <label class="fld">3) ใน 4 สัปดาห์นี้ ได้รับยา/การรักษาเพื่อหยุดเลือดหรือไม่ (ถ้ามี ระบุ)</label>
       <textarea id="treatment" placeholder="เช่น ได้รับยา… / ไม่มี"></textarea>
       <label class="fld" style="margin-top:10px">หมายเหตุ (ถ้ามี)</label>
       <textarea id="note" placeholder=""></textarea>
     </div>
 
     <button id="saveBtn" class="btn">บันทึกข้อมูล</button>
-    <p class="hint" id="saveHint">ข้อมูลจะถูกบันทึกแบบไม่ระบุชื่อ</p>
+    <p class="hint">ข้อมูลจะถูกบันทึกแบบไม่ระบุชื่อ</p>
   </div>
 
   <!-- STEP: done -->
@@ -116,142 +145,165 @@
     <div class="big">✅</div>
     <p style="font-size:18px;font-weight:600;margin:6px 0">บันทึกเรียบร้อยแล้ว ขอบคุณค่ะ</p>
     <p class="sub" id="doneMsg"></p>
-    <button id="againBtn" class="btn ghost">บันทึกสัปดาห์อื่น</button>
+    <button id="againBtn" class="btn ghost">บันทึกช่วงอื่น</button>
     <button id="closeBtn" class="btn" style="margin-top:8px">ปิดหน้าต่าง</button>
   </div>
 
-  <!-- loading -->
   <div id="loading" class="card">กำลังโหลด…</div>
-
 </div>
 
 <script>
 /* ======================= CONFIG — fill these two ======================= */
 const LIFF_ID  = '2011384405-7nTuJXQe';                 // the DIARY's LIFF ID (LINE Developers > LIFF) — NOT the baseline's
-const API_URL  = 'https://script.google.com/macros/s/AKfycbzwPCaiim9dCQxqlPrnqXvcMiW5TS4cxiSZGJbIv_NchCEeLTd0hDitddiVmF2hw-Z0RQ/exec';    // the /exec URL from Apps Script deploy (same as baseline.html)
+const API_URL  = 'https://script.google.com/macros/s/AKfycbyrzMxYoxfG8hERFFjeqr1hvKKKQtpBc9FB4D0Im_96-9XWzP_cIMf9B7j0Fl_NFZg_nQ/exec';    // the /exec URL from Apps Script deploy (same as baseline.html)
 /* ====================================================================== */
 
 const THDAY = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const LABEL = {none:'ไม่มี', spotting:'กะปริบ', bleeding:'เลือด'};
+let PERIOD_DAYS = 28, N_PERIODS = 7;
 let userId = null, studyId = null, mode = 'preview';
-const state = {};   // date -> {status, bothersome}
+let p1 = null;               // Date: Sunday that starts period 1
+let daysByPeriod = {};       // {k: days already saved}
+let cur = 1;                 // selected period number
+let brush = null;
+const state = {};            // 'yyyy-mm-dd' -> 'none'|'spotting'|'bleeding'
+const weekly = {};           // week index 0..3 -> 'yes'|'no'
 
 const $ = id => document.getElementById(id);
 function show(id){ ['notFoundCard','diaryCard','doneCard','loading'].forEach(x=>$(x).classList.add('hidden')); $(id).classList.remove('hidden'); }
 function banner(html,cls){ const b=$('banner'); if(!html){b.innerHTML='';return;} b.innerHTML='<div class="banner '+cls+'">'+html+'</div>'; }
-
 async function api(payload){
   const res = await fetch(API_URL, { method:'POST', body: JSON.stringify(payload) }); // text/plain => no preflight
   const txt = await res.text();
   try { return JSON.parse(txt); } catch(e){ throw new Error('API response not JSON: '+txt.slice(0,120)); }
 }
-
 function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function dm(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
+function parseYmd(s){ const p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function addDays(d,n){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n); }
+function todayD(){ const t=new Date(); return new Date(t.getFullYear(),t.getMonth(),t.getDate()); }
+function pStart(k){ return addDays(p1,(k-1)*PERIOD_DAYS); }
+function pEnd(k){ return addDays(p1,k*PERIOD_DAYS-1); }
+function periodOf(d){ return Math.floor(Math.round((d-p1)/86400000)/PERIOD_DAYS)+1; }
 
-function buildGrid(){
-  const nb=$('noBleedBtn'); if(nb){ nb.classList.remove('done'); nb.textContent='✓ สัปดาห์นี้ไม่มีเลือดออกเลย (ทั้ง 7 วัน)'; }
-  const start = parseInput($('weekStart').value);
-  const grid = $('grid'); grid.innerHTML='';
-  for(let i=0;i<7;i++){
-    const d = new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
-    const key = ymd(d);
-    if(!state[key]) state[key] = {status:'', bothersome:false};
-    const row = document.createElement('div'); row.className='day';
-    row.innerHTML =
-      '<div class="dlabel">'+THDAY[d.getDay()]+' <b>'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'</b></div>'+
-      '<div class="seg" data-key="'+key+'">'+
-        '<button data-v="none">ไม่มี</button>'+
-        '<button data-v="spotting">กะปริบ<br>กะปรอย</button>'+
-        '<button data-v="bleeding">เลือด<br>ออก</button>'+
-      '</div>'+
-      '<label class="both" data-key="'+key+'"><input type="checkbox"> รบกวนการใช้ชีวิต</label>';
-    grid.appendChild(row);
-    // restore
-    paint(key);
+/* ---------- period chips ---------- */
+function defaultPeriod(){
+  const t=todayD(), c=Math.min(Math.max(periodOf(t),1),N_PERIODS);
+  // earliest FINISHED period that is not complete; otherwise the current one
+  for(let k=1;k<=N_PERIODS;k++){ if(pEnd(k)<t && (daysByPeriod[k]||0)<PERIOD_DAYS) return k; }
+  return c;
+}
+function renderChips(){
+  const box=$('periodChips'); box.innerHTML=''; const t=todayD();
+  for(let k=1;k<=N_PERIODS;k++){
+    const b=document.createElement('button'); const n=daysByPeriod[k]||0;
+    const st = n>=PERIOD_DAYS ? '✓ ครบแล้ว' : (n ? 'บันทึกแล้ว '+n+'/'+PERIOD_DAYS : (pEnd(k)<t ? 'ยังไม่บันทึก' : (pStart(k)<=t ? 'ช่วงปัจจุบัน' : '')));
+    b.innerHTML='ช่วงที่ '+k+'<small>'+dm(pStart(k))+'–'+dm(pEnd(k))+'</small><small>'+st+'</small>';
+    b.disabled = pStart(k)>t;
+    b.classList.toggle('on',k===cur);
+    b.addEventListener('click',()=>selectPeriod(k));
+    box.appendChild(b);
   }
-  grid.querySelectorAll('.seg button').forEach(b=>{
-    b.addEventListener('click',()=>{
-      const key=b.parentElement.dataset.key;
-      state[key].status=b.dataset.v;
-      if(b.dataset.v==='none') state[key].bothersome=false;
-      paint(key);
-    });
-  });
-  grid.querySelectorAll('.both input').forEach(cb=>{
-    cb.addEventListener('change',()=>{ state[cb.closest('.both').dataset.key].bothersome=cb.checked; });
-  });
 }
-function paint(key){
-  const seg=document.querySelector('.seg[data-key="'+key+'"]'); if(!seg) return;
-  seg.querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.v===state[key].status));
-  const both=document.querySelector('.both[data-key="'+key+'"]');
-  const active = state[key].status==='spotting'||state[key].status==='bleeding';
-  both.classList.toggle('show', active);
-  both.querySelector('input').checked = state[key].bothersome;
+function selectPeriod(k){
+  cur=k; for(const x in state) delete state[x]; for(const x in weekly) delete weekly[x];
+  $('treatment').value=''; $('note').value='';
+  renderChips(); renderCal();
 }
-function parseInput(v){ if(!v){const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate()-t.getDay());} const p=v.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
 
+/* ---------- calendar ---------- */
+function renderCal(){
+  const cal=$('cal'); cal.innerHTML=''; const t=todayD(); const s=pStart(cur);
+  THDAY.forEach(x=>{ const h=document.createElement('div'); h.className='hd'; h.textContent=x; cal.appendChild(h); });
+  for(let i=0;i<PERIOD_DAYS;i++){
+    if(i%7===0){ const w=document.createElement('div'); w.className='wk'; w.textContent='สัปดาห์ที่ '+(i/7+1)+'  ('+dm(addDays(s,i))+'–'+dm(addDays(s,i+6))+')'; cal.appendChild(w); }
+    const d=addDays(s,i), key=ymd(d), el=document.createElement('div');
+    el.className='d'+(d>t?' future':'')+(state[key]?' '+state[key]:'');
+    el.innerHTML='<div class="n">'+dm(d)+'</div><div class="s">'+(state[key]?LABEL[state[key]]:'')+'</div>';
+    if(d<=t) el.addEventListener('click',()=>{
+      if(!brush){ alert('กรุณาเลือกสถานะ (ไม่มี / กะปริบกะปรอย / เลือดออก) ก่อนแตะวันที่'); return; }
+      if(state[key]===brush) delete state[key]; else state[key]=brush;
+      renderCal();
+    });
+    cal.appendChild(el);
+  }
+  renderProgress(); renderWeekly();
+}
+function elapsedKeys(){ const t=todayD(), s=pStart(cur), out=[]; for(let i=0;i<PERIOD_DAYS;i++){ const d=addDays(s,i); if(d<=t) out.push(ymd(d)); } return out; }
+function renderProgress(){
+  const el=elapsedKeys(), filled=el.filter(k=>state[k]).length;
+  $('progress').innerHTML='ระบุแล้ว <b>'+filled+'</b> จาก <b>'+el.length+'</b> วัน'+(el.length<PERIOD_DAYS?' (ช่วงนี้ยังไม่ครบ 28 วัน)':'');
+}
+function fillRemaining(){ elapsedKeys().forEach(k=>{ if(!state[k]) state[k]='none'; }); renderCal(); }
+
+/* ---------- weekly bothersome ---------- */
+function weekHasBleed(w){ const s=pStart(cur); for(let i=0;i<7;i++){ const v=state[ymd(addDays(s,w*7+i))]; if(v==='spotting'||v==='bleeding') return true; } return false; }
+function weekHasAny(w){ const s=pStart(cur); for(let i=0;i<7;i++){ if(state[ymd(addDays(s,w*7+i))]) return true; } return false; }
+function renderWeekly(){
+  const box=$('weekly'); box.innerHTML=''; const s=pStart(cur); let any=false;
+  for(let w=0;w<4;w++){
+    if(!weekHasBleed(w)){ delete weekly[w]; continue; }
+    any=true;
+    const q=document.createElement('div'); q.className='wq';
+    q.innerHTML='<div class="t">สัปดาห์ที่ '+(w+1)+' ('+dm(addDays(s,w*7))+'–'+dm(addDays(s,w*7+6))+')</div>'+
+      '<div class="yn"><button data-v="yes">รบกวน</button><button data-v="no">ไม่รบกวน</button></div>';
+    q.querySelectorAll('button').forEach(b=>{
+      b.classList.toggle('on',weekly[w]===b.dataset.v);
+      b.addEventListener('click',()=>{ weekly[w]=b.dataset.v; renderWeekly(); });
+    });
+    box.appendChild(q);
+  }
+  $('weeklyNone').classList.toggle('hidden',any);
+}
+
+/* ---------- save ---------- */
 async function save(){
+  const days=Object.keys(state).map(k=>({date:k,status:state[k]}));
+  if(!days.length){ alert('กรุณาระบุสถานะอย่างน้อย 1 วัน'); return; }
+  for(let w=0;w<4;w++){ if(weekHasBleed(w) && !weekly[w]){ alert('กรุณาตอบข้อ 2) ว่าเลือดออกรบกวนหรือไม่ ของสัปดาห์ที่ '+(w+1)); return; } }
+  const missing=elapsedKeys().filter(k=>!state[k]).length;
+  if(missing && !confirm('ยังไม่ได้ระบุ '+missing+' วัน ต้องการบันทึกเท่าที่มีก่อนหรือไม่?')) return;
+  const s=pStart(cur), wk=[];
+  for(let w=0;w<4;w++){ if(weekHasAny(w)) wk.push({week_start:ymd(addDays(s,w*7)), week_in_period:w+1, bothersome: weekHasBleed(w)?weekly[w]:''}); }
   $('saveBtn').disabled=true;
-  const week_start=$('weekStart').value;
-  const days=Object.keys(state).filter(k=>state[k].status).map(k=>({date:k,status:state[k].status,bothersome:state[k].bothersome}));
-  if(!days.length){ alert('กรุณาเลือกสถานะอย่างน้อย 1 วัน'); $('saveBtn').disabled=false; return; }
   try{
-    const r=await api({action:'submit', userId, week_start, days,
+    const r=await api({action:'submit', userId, period_start:ymd(s), period_no:cur, days, weekly:wk,
                        treatment:$('treatment').value, note:$('note').value, source:'self'});
     if(!r.ok) throw new Error(r.error||'save failed');
-    $('doneMsg').textContent='บันทึก '+r.days_saved+' วัน (รหัส '+r.study_id+')';
+    $('doneMsg').textContent='บันทึก '+r.days_saved+' วัน ช่วงที่ '+cur+' (รหัส '+r.study_id+')';
     show('doneCard');
   }catch(e){ alert('บันทึกไม่สำเร็จ: '+e.message); }
   $('saveBtn').disabled=false;
 }
 
-function selectWeek(startYmd){
-  $('weekStart').value=startYmd;
-  for(const k in state) delete state[k];
-  buildGrid();
-  document.querySelectorAll('#weekChips button').forEach(b=> b.classList.toggle('on', b.dataset.start===startYmd));
-}
-function renderWeekChips(){
-  const box=$('weekChips'); box.innerHTML='';
-  const t=new Date(); const today=new Date(t.getFullYear(),t.getMonth(),t.getDate());
-  const labels=['สัปดาห์นี้','สัปดาห์ที่แล้ว','2 สัปดาห์ก่อน','3 สัปดาห์ก่อน'];
-  for(let w=0;w<4;w++){
-    const start=new Date(today.getFullYear(),today.getMonth(),today.getDate()-today.getDay()-7*w);
-    const end=new Date(start.getFullYear(),start.getMonth(),start.getDate()+6);
-    const dd=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
-    const b=document.createElement('button');
-    b.dataset.start=ymd(start);
-    b.innerHTML=labels[w]+'<br>'+dd(start)+'–'+dd(end);
-    b.addEventListener('click',()=>selectWeek(b.dataset.start));
-    box.appendChild(b);
-  }
+/* ---------- boot ---------- */
+async function loadInfo(){
+  const r=await api({action:'resolve',userId});
+  studyId=r.study_id||null;
+  if(!studyId) return false;
+  PERIOD_DAYS=r.period_days||28; N_PERIODS=r.n_periods||7;
+  daysByPeriod=r.days_by_period||{};
+  if(r.p1_start) p1=parseYmd(r.p1_start);
+  else { const t=todayD(); p1=addDays(t,-t.getDay()); }
+  return true;
 }
 function startDiary(){
   $('whoSid').textContent=studyId;
-  renderWeekChips();
-  const t=new Date(); const start=ymd(new Date(t.getFullYear(),t.getMonth(),t.getDate()-t.getDay()));
-  selectWeek(start);
-  $('weekStart').onchange=()=>{ for(const k in state) delete state[k]; buildGrid();
-    document.querySelectorAll('#weekChips button').forEach(b=>b.classList.remove('on')); };
+  cur=defaultPeriod();
+  selectPeriod(cur);
   show('diaryCard');
 }
-
-function markNoBleedWeek(){
-  const start=parseInput($('weekStart').value);
-  for(let i=0;i<7;i++){ const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i); state[ymd(d)]={status:'none',bothersome:false}; }
-  buildGrid();
-  const b=$('noBleedBtn'); b.classList.add('done'); b.textContent='✓ ทำเครื่องหมายครบ 7 วันแล้ว — กด "บันทึกข้อมูล" ด้านล่าง';
-}
-$('noBleedBtn').addEventListener('click',markNoBleedWeek);
+document.querySelectorAll('#brush button').forEach(b=>b.addEventListener('click',()=>{
+  brush=b.dataset.v; document.querySelectorAll('#brush button').forEach(x=>x.classList.toggle('on',x===b));
+}));
+$('fillBtn').addEventListener('click',fillRemaining);
 $('saveBtn').addEventListener('click',save);
-$('againBtn').addEventListener('click',()=>{ for(const k in state) delete state[k]; startDiary(); });
+$('againBtn').addEventListener('click',async()=>{ show('loading'); try{ await loadInfo(); }catch(e){} startDiary(); });
 function closeApp(){ if(mode==='liff'&&window.liff&&liff.closeWindow) liff.closeWindow(); else location.reload(); }
 $('closeBtn').addEventListener('click',closeApp);
 $('closeBtnNF').addEventListener('click',closeApp);
 
 async function boot(){
-  // Identify the participant from her LINE account. There is NO manual Study ID entry here:
-  // the link (userId <-> study_id) is created by the BASELINE questionnaire (baseline.html).
   if(LIFF_ID && LIFF_ID!=='PASTE_YOUR_LIFF_ID' && window.liff){
     try{
       await liff.init({liffId:LIFF_ID});
@@ -260,12 +312,14 @@ async function boot(){
     }catch(e){ console.warn('LIFF init failed → preview mode',e); mode='preview'; }
   }
   if(mode==='preview'){
-    banner('โหมดทดสอบ (Preview) — ยังไม่ได้เชื่อมกับ LINE','preview');
-    show('notFoundCard'); return;
+    // Preview: show the UI with a fake participant so the layout can be checked in a browser. Nothing is saved.
+    banner('โหมดทดสอบ (Preview) — ยังไม่ได้เชื่อมกับ LINE • ข้อมูลจะไม่ถูกบันทึก','preview');
+    studyId='PREVIEW'; const t=todayD(); p1=addDays(t,-t.getDay()-35); daysByPeriod={1:28};
+    $('saveBtn').disabled=true;
+    startDiary(); return;
   }
-  try{ const r=await api({action:'resolve',userId}); studyId=r.study_id; }catch(e){}
-  if(studyId) startDiary();
-  else show('notFoundCard');   // baseline not done yet -> she cannot record
+  let ok=false; try{ ok=await loadInfo(); }catch(e){}
+  if(ok) startDiary(); else show('notFoundCard');
 }
 boot();
 </script>
